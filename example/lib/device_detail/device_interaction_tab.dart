@@ -112,7 +112,7 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
       Uuid.parse("00002bb2-0000-1000-8000-00805f9b34fb");
   static Uuid SERVICE_SECUGEN_SPP_OVER_BLE =
       Uuid.parse("0000fda0-0000-1000-8000-00805f9b34fb");
-  String _version = "";
+  String _status = "";
   List<int> mTransferBuffer =
       List<int>.filled(PACKET_HEADER_SIZE + IMG_SIZE_MAX + 1, 0);
   int mBytesRead = 0;
@@ -205,33 +205,52 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
           fmsTemplate.write(data!.get(), data.dLength, 1);
 
           copyToBuffer(data.get(), data.dLength);
+          setState(() {
+            _status = "Template saved with success";
+          });
           break;
         default:
           print("Error Get Template");
+          setState(() {
+            _status = "Error Get Template";
+          });
       }
     } else if (header.pktCommand == PK_COMMAND_VERIFY) {
       switch (header.pktError) {
         case errNone:
           print("Template  has been verified");
-
+          setState(() {
+            _status = "Template  has been verified";
+          });
           break;
         case errVerifyFailed:
           print("Template is not verified.");
+          setState(() {
+            _status = "Template is not verified.";
+          });
         case errInvalidFormat:
           print("Format is invalid");
-
+          setState(() {
+            _status = "Format is invalid";
+          });
           break;
         default:
           print("Error Verify Template");
+          setState(() {
+            _status = "Error Verify Template";
+          });
       }
     } else if (header.pktCommand == PK_COMMAND_VERSION) {
       switch (header.pktError) {
         case errNone:
-          _version = (await _secugenBlePlugin.parseResponse(buffer)).toString();
+          _status = (await _secugenBlePlugin.parseResponse(buffer)).toString();
           setState(() {});
           break;
         default:
-          print("Error Verify Template");
+          print("Error Version");
+          setState(() {
+            _status = "Error get Version";
+          });
       }
     }
   }
@@ -345,7 +364,7 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
                 Padding(
                   padding: const EdgeInsetsDirectional.only(start: 16.0),
                   child: Text(
-                    "Version: $_version  ",
+                    "Status: $_status  ",
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
