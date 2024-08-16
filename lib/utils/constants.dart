@@ -1,6 +1,7 @@
 const String CHANNEL = 'com.fdxpro.secugenfplib/fingerprintReader';
 
 const String METHOD_GET_VERSION = 'cmdGetVersion';
+const String METHOD_GET_HEADER = 'getHeader';
 const String METHOD_MAKE_RECORD_START = "cmdMakeRecordStart";
 const String METHOD_MAKE_RECORD_CONT = "cmdMakeRecordCont";
 const String METHOD_MAKE_RECORD_END = "cmdMakeRecordEnd";

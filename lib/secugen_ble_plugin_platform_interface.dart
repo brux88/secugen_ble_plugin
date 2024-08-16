@@ -1,6 +1,8 @@
+import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:secugen_ble_plugin/utils/fmsheader.dart';
 
 import 'secugen_ble_plugin_method_channel.dart';
 
@@ -25,33 +27,21 @@ abstract class SecugenBlePluginPlatform extends PlatformInterface {
     _instance = instance;
   }
 
-  Future<String?> getPlatformVersion() {
-    throw UnimplementedError('platformVersion() has not been implemented.');
+  Future<String?> parseResponse(List<int> bytes) {
+    throw UnimplementedError('parseResponse() has not been implemented.');
   }
 
-  Future<String?> getVersion() {
+  Future<List<int>> getVersion() {
     throw UnimplementedError('Version() has not been implemented.');
   }
 
-  Future<void> makeRecordStart(int fingerNumber) {
-    throw UnimplementedError('makeRecordStart() has not been implemented.');
+  Future<List<int>> getTemplate() {
+    throw UnimplementedError('getTemplate() has not been implemented.');
   }
 
-  Future<void> makeRecordCont(int fingerNumber) {
-    throw UnimplementedError('makeRecordCont() has not been implemented.');
-  }
-
-  Future<void> makeRecordEnd() {
-    throw UnimplementedError('makeRecordEnd() has not been implemented.');
-  }
-
-  Future<void> loadMatchTemplate(int extraDataSize) {
-    throw UnimplementedError('loadMatchTemplate() has not been implemented.');
-  }
-
-  Future<void> loadMatchTemplateWithExtraData(
-      int extraDataSize, Uint8List extraData) {
+  Future<List<int>> instantVerifyExtraData(
+      int numberOfTemplate, int extraDataSize, Uint8List extraData) {
     throw UnimplementedError(
-        'loadMatchTemplateWithExtraData() has not been implemented.');
+        'instantVerifyExtraData() has not been implemented.');
   }
 }

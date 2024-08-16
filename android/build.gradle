@@ -26,7 +26,7 @@ android {
         namespace 'com.brux88.secugen_ble_plugin'
     }
 
-    compileSdkVersion 33
+    compileSdkVersion 34
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
@@ -34,7 +34,7 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 19
+        minSdkVersion 21
     }
 
     dependencies {
@@ -42,6 +42,8 @@ android {
         testImplementation 'org.mockito:mockito-core:5.0.0'
         implementation 'com.android.support.constraint:constraint-layout:1.1.3'
         implementation 'androidx.constraintlayout:constraintlayout:2.1.3' // Usa la versione AndroidX
+        implementation 'com.google.code.gson:gson:2.10.1' // Usa l'ultima versione disponibile
+
     }
 
     testOptions {

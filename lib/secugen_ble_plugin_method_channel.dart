@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:secugen_ble_plugin/utils/SgfplibException_exception.dart';
@@ -5,72 +7,47 @@ import 'package:secugen_ble_plugin/utils/SgfplibException_exception.dart';
 import 'secugen_ble_plugin_platform_interface.dart';
 import 'utils/constants.dart';
 
-/// An implementation of [SecugenBlePluginPlatform] that uses method channels.
 class MethodChannelSecugenBlePlugin extends SecugenBlePluginPlatform {
-  /// The method channel used to interact with the native platform.
   @visibleForTesting
   final methodChannel = const MethodChannel('secugen_ble_plugin');
 
   @override
-  Future<String?> getPlatformVersion() async {
-    final version =
-        await methodChannel.invokeMethod<String>('getPlatformVersion');
-    return version;
-  }
-
-  @override
-  Future<void> makeRecordStart(int fingerNumber) async {
+  Future<List<int>> instantVerifyExtraData(
+      int numberOfTemplate, int extraDataSize, Uint8List extraData) async {
     try {
-      await methodChannel.invokeMethod(METHOD_MAKE_RECORD_START, fingerNumber);
+      final instatVerify = await methodChannel.invokeMethod(
+          METHOD_INSTANT_VERIFY_WITH_EXTRADATA,
+          [numberOfTemplate, extraDataSize, extraData]);
+      return instatVerify;
     } on PlatformException catch (e) {
       throw _libException(e);
     }
   }
 
   @override
-  Future<void> makeRecordCont(int fingerNumber) async {
+  Future<String?> parseResponse(List<int> bytes) async {
     try {
-      await methodChannel.invokeMethod(METHOD_MAKE_RECORD_CONT, fingerNumber);
+      var result = await methodChannel.invokeMethod<String?>(
+          METHOD_PARSE_RESPONSE, bytes);
+      return result;
     } on PlatformException catch (e) {
       throw _libException(e);
     }
   }
 
   @override
-  Future<void> makeRecordEnd() async {
+  Future<List<int>> getTemplate() async {
     try {
-      await methodChannel.invokeMethod(METHOD_MAKE_RECORD_END);
+      final template = await methodChannel.invokeMethod(METHOD_GET_TEMPLATE);
+      return template;
     } on PlatformException catch (e) {
       throw _libException(e);
     }
   }
 
   @override
-  Future<void> loadMatchTemplate(int extraDataSize) async {
-    try {
-      await methodChannel.invokeMethod(
-          METHOD_LOAD_MATCH_TEMPLATE, extraDataSize);
-    } on PlatformException catch (e) {
-      throw _libException(e);
-    }
-  }
-
-  @override
-  Future<void> loadMatchTemplateWithExtraData(
-      int extraDataSize, Uint8List extraData) async {
-    try {
-      await methodChannel.invokeMethod(
-          METHOD_LOAD_MATCH_TEMPLATE_WITH_EXTRADATA,
-          [extraDataSize, extraData]);
-    } on PlatformException catch (e) {
-      throw _libException(e);
-    }
-  }
-
-  @override
-  Future<String?> getVersion() async {
-    final version =
-        await methodChannel.invokeMethod<String>(METHOD_GET_VERSION);
+  Future<List<int>> getVersion() async {
+    final version = await methodChannel.invokeMethod(METHOD_GET_VERSION);
     return version;
   }
 
