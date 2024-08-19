@@ -10,7 +10,6 @@ import 'package:secugen_ble_plugin/utils/fmstemplatefile.dart';
 import 'package:secugen_ble_plugin/utils/operation_result.dart';
 import 'package:secugen_ble_plugin/utils/teamplate_nfc.dart';
 import 'secugen_ble_plugin_platform_interface.dart';
-import 'package:uuid/uuid.dart' as guidpack;
 import 'package:ndef/ndef.dart' as ndef;
 
 class SecugenBlePlugin {
