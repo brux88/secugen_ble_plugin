@@ -1,15 +1,25 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:secugen_ble_plugin/utils/fmsdata.dart';
 import 'package:secugen_ble_plugin/utils/fmsheader.dart';
 import 'package:secugen_ble_plugin/utils/fmstemplatefile.dart';
+import 'package:secugen_ble_plugin/utils/operation_result.dart';
+import 'package:secugen_ble_plugin/utils/teamplate_nfc.dart';
 import 'secugen_ble_plugin_platform_interface.dart';
-
-typedef DataCallback = void Function(String result);
+import 'package:uuid/uuid.dart' as guidpack;
+import 'package:ndef/ndef.dart' as ndef;
 
 class SecugenBlePlugin {
+  Completer<OperationResult>? _completerRegisterFingerPrint;
+  Completer<OperationResult>? _completerVerifyFingerPrint;
+  Completer<OperationResult>? _completerWriteNfc;
+  Completer<OperationResult>? _completerReadNfc;
+  Completer<OperationResult>? _completerVersionDevice;
+
   Uint8List mOneTemplateBuf = Uint8List(400);
   int mOneTemplateSize = 0;
   int mBytesRead = 0;
@@ -23,7 +33,6 @@ class SecugenBlePlugin {
       StreamController<String>.broadcast();
   Stream<String> get logStream => _logController.stream;
   ValueNotifier<int> progressNotifier = ValueNotifier<int>(0);
-  DataCallback? onDataProcessed;
 
   static const int PACKET_HEADER_SIZE = 12;
   static const int IMG_WIDTH_MAX = 300;
@@ -62,8 +71,10 @@ class SecugenBlePlugin {
         .instantVerifyExtraData(numberOfTemplate, extraDataSize, extraData);
   }
 
-  Future<void> getFingerPrintTemplate(
+  Future<OperationResult> getFingerPrintTemplate(
       FlutterReactiveBle ble, String deviceId) async {
+    _completerRegisterFingerPrint = Completer<OperationResult>();
+
     mTransferBuffer =
         List<int>.filled(PACKET_HEADER_SIZE + IMG_SIZE_MAX + 1, 0);
 
@@ -74,6 +85,7 @@ class SecugenBlePlugin {
 
     await ble.writeCharacteristicWithResponse(characteristicWrite,
         value: await getTemplate());
+    return _completerRegisterFingerPrint!.future;
   }
 
   void updateProgress(int progress) {
@@ -81,6 +93,7 @@ class SecugenBlePlugin {
   }
 
   void addLog(String message) {
+    print(message);
     _logController.add(message);
   }
 
@@ -96,7 +109,7 @@ class SecugenBlePlugin {
             characteristic.deviceId);
       });
     } catch (e) {
-      print("Error enabling notifications: $e");
+      addLog("Error enabling notifications: $e");
     }
   }
 
@@ -106,7 +119,6 @@ class SecugenBlePlugin {
       if (data.isNotEmpty &&
           data.length == PACKET_HEADER_SIZE &&
           data[0] == 0x4E) {
-        print("Detected Notify message, try read data");
         readCustomCharacteristic(ble, deviceId);
         return;
       }
@@ -130,11 +142,12 @@ class SecugenBlePlugin {
           mTransferBuffer.setRange(mBytesRead, mBytesRead + data.length, data);
           mRemainingSize -= data.length;
           mBytesRead += data.length;
-          print("mRemainingSize:  $mRemainingSize");
-          print('mBytesRead: $mBytesRead');
-          print('data.length: ${data.length}');
-          print('mTransferBuffer length: ${mTransferBuffer.length}');
-          print((mBytesRead * 100) ~/ (mRemainingSize + mBytesRead));
+          addLog("mRemainingSize:  $mRemainingSize");
+          addLog('mBytesRead: $mBytesRead');
+          addLog('data.length: ${data.length}');
+          addLog('mTransferBuffer length: ${mTransferBuffer.length}');
+          addLog(
+              ((mBytesRead * 100) ~/ (mRemainingSize + mBytesRead)).toString());
 
           if (mRemainingSize > 0) {
             updateProgress(
@@ -154,8 +167,6 @@ class SecugenBlePlugin {
   }
 
   void processCapturedData(List<int> _data) async {
-    print("processCapturedData");
-
     Uint8List buffer = Uint8List.fromList(_data);
 
     var header = FMSHeader.fromBuffer(buffer);
@@ -173,63 +184,52 @@ class SecugenBlePlugin {
           fmsTemplate.write(data!.get(), data.dLength, 1);
 
           copyToBuffer(data.get(), data.dLength);
+
           addLog("Template Completed");
-          if (onDataProcessed != null) {
-            onDataProcessed!("Template Completed");
-          }
+          _completerRegisterFingerPrint
+              ?.complete(OperationResult.success("Template Completed"));
+
           break;
         default:
-          print("Error Get Template");
-          if (onDataProcessed != null) {
-            onDataProcessed!("Error Get Template");
-          }
+          _completerRegisterFingerPrint
+              ?.complete(OperationResult.success("Error Get Template"));
       }
     } else if (header.pktCommand == PK_COMMAND_VERIFY) {
       switch (header.pktError) {
         case errNone:
-          print("Template  has been verified");
-
           addLog("Template  has been verified");
-          if (onDataProcessed != null) {
-            onDataProcessed!("Template  has been verified");
-          }
+          _completerVerifyFingerPrint?.complete(
+              OperationResult.success("Template  has been verified"));
+
           break;
         case errVerifyFailed:
-          print("Template is not verified.");
           addLog("Template is not verified.");
-          if (onDataProcessed != null) {
-            onDataProcessed!("Template is not verified.");
-          }
+          _completerVerifyFingerPrint
+              ?.complete(OperationResult.error("Template is not verified."));
+
         case errInvalidFormat:
-          print("Format is invalid");
           addLog("Format is invalid");
-          if (onDataProcessed != null) {
-            onDataProcessed!("Format is invalid");
-          }
+          _completerVerifyFingerPrint
+              ?.complete(OperationResult.error("Format is invalid"));
+
           break;
         default:
-          print("Error Verify Template");
           addLog("Error Verify Template");
-          if (onDataProcessed != null) {
-            onDataProcessed!("Error Verify Template");
-          }
+          _completerVerifyFingerPrint
+              ?.complete(OperationResult.error("Error Verify Template"));
       }
     } else if (header.pktCommand == PK_COMMAND_VERSION) {
       switch (header.pktError) {
         case errNone:
           var status = (await parseResponse(buffer)).toString();
-          print(status);
           addLog(status);
-          if (onDataProcessed != null) {
-            onDataProcessed!(status);
-          }
+          _completerVersionDevice?.complete(OperationResult.success(status));
+
           break;
         default:
-          print("Error Version");
           addLog("Error Version");
-          if (onDataProcessed != null) {
-            onDataProcessed!("Error Version");
-          }
+          _completerVersionDevice
+              ?.complete(OperationResult.error("Error Version"));
       }
     }
   }
@@ -249,23 +249,27 @@ class SecugenBlePlugin {
       );
       await ble.readCharacteristic(qualifiedCharacteristic);
     } catch (e) {
-      print("Failed to read characteristic: $e");
+      addLog("Failed to read characteristic: $e");
     }
   }
 
-  Future<void> getDeviceVersion(FlutterReactiveBle ble, String deviceId) async {
+  Future<OperationResult> getDeviceVersion(
+      FlutterReactiveBle ble, String deviceId) async {
     final characteristicWrite = QualifiedCharacteristic(
         serviceId: SERVICE_SECUGEN_SPP_OVER_BLE,
         characteristicId: CHARACTERISTIC_WRITE,
         deviceId: deviceId);
+    _completerVersionDevice = Completer<OperationResult>();
 
     await ble.writeCharacteristicWithResponse(characteristicWrite,
         value: await getVersion());
+    return _completerVersionDevice!.future;
   }
 
-  Future<void> instantVerifyFingerprint(
+  Future<OperationResult> instantVerifyFingerprint(
       FlutterReactiveBle ble, String deviceId) async {
     mTransferBuffer = mTransferBuffer;
+    _completerVerifyFingerPrint = Completer<OperationResult>();
 
     final characteristicWrite = QualifiedCharacteristic(
         serviceId: SERVICE_SECUGEN_SPP_OVER_BLE,
@@ -279,15 +283,113 @@ class SecugenBlePlugin {
               extraDataSize: mOneTemplateBuf.length, // mOneTemplateSize,
               extraData: mOneTemplateBuf)); // mOneTemplateBuf));
     } else {
-      print("Template Saved not Found");
       addLog("Template Saved not Found");
-      if (onDataProcessed != null) {
-        onDataProcessed!("Template Saved not Found");
-      }
+      _completerVerifyFingerPrint
+          ?.complete(OperationResult.error("Template Saved not Found"));
     }
+    return _completerVerifyFingerPrint!.future;
   }
 
   void dispose() {
     _logController.close();
+  }
+
+  //NFC
+// Metodo per creare e serializzare il Template in JSON
+  TemplateNFC createTemplate(Uint8List template) {
+    return TemplateNFC.fromUint8List(template);
+  }
+
+  Future<OperationResult> writeIntoNfc() async {
+    _completerWriteNfc = Completer<OperationResult>();
+
+    if (mOneTemplateBuf.isNotEmpty) {
+      try {
+        // Avvia la scansione NFC
+        NFCTag tag = await FlutterNfcKit.poll();
+
+        if (tag.ndefWritable != null) {
+          TemplateNFC templateNfc = createTemplate(mOneTemplateBuf);
+
+          String jsonString = jsonEncode(templateNfc.toJson());
+          Uint8List jsonData = Uint8List.fromList(utf8.encode(jsonString));
+          int dataSize = jsonData.length;
+          addLog("dataSize: $dataSize");
+
+          ndef.NDEFRecord record = ndef.NDEFRecord(
+            tnf: ndef.TypeNameFormat.unknown,
+            payload: jsonData,
+          );
+          await FlutterNfcKit.writeNDEFRecords([record]);
+
+          addLog("Template scritto con successo sulla scheda NFC!");
+          _completerWriteNfc?.complete(OperationResult.success(
+              "Template scritto con successo sulla scheda NFC!"));
+        } else {
+          addLog("Il tag NFC non è scrivibile");
+          _completerWriteNfc
+              ?.complete(OperationResult.error("Il tag NFC non è scrivibile"));
+        }
+        return _completerWriteNfc!.future;
+      } catch (e) {
+        addLog("Errore durante la scrittura del template sulla scheda NFC: $e");
+        _completerWriteNfc?.complete(OperationResult.error(
+            "Errore durante la scrittura del template sulla scheda NFC: $e"));
+        return _completerWriteNfc!.future;
+      } finally {
+        // Termina la sessione NFC
+        await FlutterNfcKit.finish();
+      }
+    } else {
+      addLog("Template not found");
+      return _completerWriteNfc!.future;
+    }
+  }
+
+  Future<OperationResult> readNfc() async {
+    _completerReadNfc = Completer<OperationResult>();
+    try {
+      // Poll per trovare il tag NFC
+      NFCTag tag = await FlutterNfcKit.poll();
+
+      // Assicurati che il tag sia NDEF
+      if (tag.ndefAvailable!) {
+        // Leggi i record NDEF dal tag
+        List<ndef.NDEFRecord> records = await FlutterNfcKit.readNDEFRecords();
+        if (records.isNotEmpty) {
+          // Estrai e decodifica il payload
+          List<int> payload = records.first.payload!;
+          String payloadString = utf8.decode(payload);
+          Map<String, dynamic> jsonData = jsonDecode(payloadString);
+          // Estrai il campo 'template' (contenente Base64)
+          String base64String = jsonData['template'];
+
+          // Decodifica la stringa Base64 in Uint8List
+          Uint8List template = base64Decode(base64String);
+          String id = jsonData['id'];
+          mOneTemplateBuf = template;
+          addLog('NFC Data Success Id: $id  - template: $template');
+          _completerReadNfc?.complete(OperationResult.success(
+              "NFC Data Success Id: $id  - template: $template"));
+        } else {
+          addLog('No NDEF records found!');
+
+          _completerReadNfc
+              ?.complete(OperationResult.error("No NDEF records found!"));
+        }
+      } else {
+        addLog('NDEF not available on this tag!');
+        _completerReadNfc?.complete(
+            OperationResult.error("NDEF not available on this tag!"));
+      }
+
+      // Disconnessione NFC
+      await FlutterNfcKit.finish(iosAlertMessage: "Finished!");
+    } catch (e) {
+      addLog('Error reading NFC tag: $e');
+      _completerReadNfc
+          ?.complete(OperationResult.error("Error reading NFC tag: $e"));
+    }
+    return _completerWriteNfc!.future;
   }
 }
