@@ -1,16 +1,26 @@
-# secugen_ble_plugin_example
+# SecuGen Unity 20 BLE Flutter Plugin
 
-Demonstrates how to use the secugen_ble_plugin plugin.
+## Description
 
-## Getting Started
+This Flutter plugin enables communication with the **SecuGen Unity 20 BLE** device for fingerprint reading, verification, and saving fingerprint templates to an NFC card. Currently, the plugin supports only the Android platform.
 
-This project is a starting point for a Flutter application.
+## Features
 
-A few resources to get you started if this is your first Flutter project:
+- **Fingerprint Reading**: Capture fingerprints using the SecuGen Unity 20 BLE device.
+- **Fingerprint Verification**: Compare a scanned fingerprint against a previously saved template.
+- **Save Template to NFC**: Store the fingerprint template on a compatible NFC card.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Requirements
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **Flutter**: Minimum version 2.0.0
+- **Device**: SecuGen Unity 20 BLE
+- **Platform**: Android (minimum API level 21)
+- **NFC Reader**: Android device with NFC support
+
+## Installation
+
+Add the plugin to your Flutter project's `pubspec.yaml` file:
+
+```yaml
+dependencies:
+  secugen_unity20_ble: ^1.0.0
