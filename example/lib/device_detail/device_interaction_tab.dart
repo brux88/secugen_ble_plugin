@@ -98,35 +98,20 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
   late List<Service> discoveredServices;
   final _secugenBlePlugin = SecugenBlePlugin();
   final FlutterReactiveBle _ble = FlutterReactiveBle();
-  static const int PACKET_HEADER_SIZE = 12;
-  static const int IMG_WIDTH_MAX = 300;
-  static const int PK_COMMAND_CAPTURE = 67;
-  static const int PK_COMMAND_VERIFY = 208;
-  static const int PK_COMMAND_VERSION = 5;
-  static const int PK_COMMAND_TEMPLATE = 64;
-  static const int IMG_HEIGHT_MAX = 400;
-  static const int IMG_SIZE_MAX = (IMG_WIDTH_MAX * IMG_HEIGHT_MAX);
-  static const int errNone = 0x00; // Nomrale Operazione
-  static const int errVerifyFailed =
-      0x04; // Errore di verifica dell'impronta digitale
-  static const int errInvalidFormat = 0x30; //  Record format is invalid
 
-  static Uuid CHARACTERISTIC_READ_NOTIFY =
-      Uuid.parse("00002bb1-0000-1000-8000-00805f9b34fb");
-  static Uuid CHARACTERISTIC_WRITE =
-      Uuid.parse("00002bb2-0000-1000-8000-00805f9b34fb");
-  static Uuid SERVICE_SECUGEN_SPP_OVER_BLE =
-      Uuid.parse("0000fda0-0000-1000-8000-00805f9b34fb");
   String _status = "";
-  List<int> mTransferBuffer =
-      List<int>.filled(PACKET_HEADER_SIZE + IMG_SIZE_MAX + 1, 0);
-  int mBytesRead = 0;
-  int mRemainingSize = 0;
-  int mCurrentCommand = 0;
+  List<int> mTransferBuffer = [];
+
   @override
   void initState() {
     discoveredServices = [];
     super.initState();
+    mTransferBuffer = _secugenBlePlugin.mTransferBuffer;
+    _secugenBlePlugin.onDataProcessed = (result) {
+      setState(() {
+        _status = result;
+      });
+    };
   }
 
   @override
@@ -134,201 +119,11 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
     super.dispose();
   }
 
-  void processCharacteristicData(
-      List<int> data, Uuid characteristicId, String deviceId) async {
-    if (characteristicId == CHARACTERISTIC_READ_NOTIFY) {
-      if (data.isNotEmpty &&
-          data.length == PACKET_HEADER_SIZE &&
-          data[0] == 0x4E) {
-        print("Detected Notify message, try read data");
-        readCustomCharacteristic(deviceId);
-        return;
-      }
-
-      if (data.isNotEmpty) {
-        if (data.length == PACKET_HEADER_SIZE) {
-          Uint8List buffer = Uint8List.fromList(data);
-
-          var header = FMSHeader.fromBuffer(buffer);
-          mCurrentCommand = header.pktCommand;
-          int nExtraDataSize = header.getExtraDataSize();
-
-          if (nExtraDataSize > 0 &&
-              header.pktChecksum == data[PACKET_HEADER_SIZE - 1]) {
-            mRemainingSize = PACKET_HEADER_SIZE + nExtraDataSize;
-            mBytesRead = 0;
-          }
-        }
-
-        if (mRemainingSize > 0) {
-          mTransferBuffer.setRange(mBytesRead, mBytesRead + data.length, data);
-          mRemainingSize -= data.length;
-          mBytesRead += data.length;
-          print("mRemainingSize:  $mRemainingSize");
-          print('mBytesRead: $mBytesRead');
-          print('data.length: ${data.length}');
-          print('mTransferBuffer length: ${mTransferBuffer.length}');
-          print((mBytesRead * 100) ~/ (mRemainingSize + mBytesRead));
-
-          if (mRemainingSize > 0) {
-            readCustomCharacteristic(deviceId);
-          } else {
-            processCapturedData(mTransferBuffer);
-          }
-        } else if (mCurrentCommand == PK_COMMAND_VERIFY ||
-            mCurrentCommand == PK_COMMAND_VERSION) {
-          processCapturedData(data);
-        }
-      }
-    }
-  }
-
-  Uint8List mOneTemplateBuf = Uint8List(400);
-  int mOneTemplateSize = 0;
-  void copyToBuffer(Uint8List data, int length) {
-    mOneTemplateBuf.setRange(0, length, data);
-    mOneTemplateSize = length;
-  }
-
-  void processCapturedData(List<int> _data) async {
-    print("processCapturedData");
-
-    Uint8List buffer = Uint8List.fromList(_data);
-
-    var header = FMSHeader.fromBuffer(buffer);
-
-    FMSData? data;
-
-    if (!(header.pktCommand == PK_COMMAND_CAPTURE)) {
-      data = FMSData.fromBytes(buffer);
-    }
-    if (header.pktCommand == PK_COMMAND_TEMPLATE) {
-      switch (header.pktError) {
-        case errNone:
-          var fmsTemplate = FMSTemplateFile();
-
-          fmsTemplate.write(data!.get(), data.dLength, 1);
-
-          copyToBuffer(data.get(), data.dLength);
-          setState(() {
-            _status = "Template saved with success";
-          });
-          break;
-        default:
-          print("Error Get Template");
-          setState(() {
-            _status = "Error Get Template";
-          });
-      }
-    } else if (header.pktCommand == PK_COMMAND_VERIFY) {
-      switch (header.pktError) {
-        case errNone:
-          print("Template  has been verified");
-          setState(() {
-            _status = "Template  has been verified";
-          });
-          break;
-        case errVerifyFailed:
-          print("Template is not verified.");
-          setState(() {
-            _status = "Template is not verified.";
-          });
-        case errInvalidFormat:
-          print("Format is invalid");
-          setState(() {
-            _status = "Format is invalid";
-          });
-          break;
-        default:
-          print("Error Verify Template");
-          setState(() {
-            _status = "Error Verify Template";
-          });
-      }
-    } else if (header.pktCommand == PK_COMMAND_VERSION) {
-      switch (header.pktError) {
-        case errNone:
-          _status = (await _secugenBlePlugin.parseResponse(buffer)).toString();
-          setState(() {});
-          break;
-        default:
-          print("Error Version");
-          setState(() {
-            _status = "Error get Version";
-          });
-      }
-    }
-  }
-
-  Future readCustomCharacteristic(String deviceId) async {
-    try {
-      final qualifiedCharacteristic = QualifiedCharacteristic(
-        characteristicId: CHARACTERISTIC_READ_NOTIFY,
-        serviceId: SERVICE_SECUGEN_SPP_OVER_BLE,
-        deviceId: deviceId,
-      );
-      await _ble.readCharacteristic(qualifiedCharacteristic);
-    } catch (e) {
-      print("Failed to read characteristic: $e");
-    }
-  }
-
   Future<void> discoverServices() async {
     final result = await widget.viewModel.discoverServices();
     setState(() {
       discoveredServices = result;
     });
-  }
-
-  Future<void> enableNotifications(
-      QualifiedCharacteristic characteristic) async {
-    try {
-      _ble.subscribeToCharacteristic(characteristic).listen((data) {
-        processCharacteristicData(
-            data, characteristic.characteristicId, characteristic.deviceId);
-      });
-    } catch (e) {
-      print("Error enabling notifications: $e");
-    }
-  }
-
-  Future<void> instantVerifyExtraData() async {
-    mTransferBuffer =
-        List<int>.filled(PACKET_HEADER_SIZE + IMG_SIZE_MAX + 1, 0);
-
-    final characteristicWrite = QualifiedCharacteristic(
-        serviceId: SERVICE_SECUGEN_SPP_OVER_BLE,
-        characteristicId: CHARACTERISTIC_WRITE,
-        deviceId: widget.viewModel.deviceId);
-
-    // var templateSaved = await FMSTemplateFile().read(1);
-
-    if (!mOneTemplateBuf.every((byte) => byte == 0)) {
-      await _ble.writeCharacteristicWithResponse(characteristicWrite,
-          value: await _secugenBlePlugin.instantVerifyExtraData(
-              numberOfTemplate: 0,
-              extraDataSize: mOneTemplateBuf.length, // mOneTemplateSize,
-              extraData: mOneTemplateBuf)); // mOneTemplateBuf));
-    } else {
-      print("Template Saved not Found");
-      setState(() {
-        _status = 'Template Saved not Found';
-      });
-      //throw ("Template Saved not Found");
-    }
-  }
-
-  Future<void> getTemplate() async {
-    mTransferBuffer =
-        List<int>.filled(PACKET_HEADER_SIZE + IMG_SIZE_MAX + 1, 0);
-
-    final characteristicWrite = QualifiedCharacteristic(
-        serviceId: SERVICE_SECUGEN_SPP_OVER_BLE,
-        characteristicId: CHARACTERISTIC_WRITE,
-        deviceId: widget.viewModel.deviceId);
-
-    await _ble.writeCharacteristicWithResponse(characteristicWrite,
-        value: await _secugenBlePlugin.getTemplate());
   }
 
   Map<String, dynamic> createJsonTemplate(Uint8List template) {
@@ -364,7 +159,7 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
           // Decodifica la stringa Base64 in Uint8List
           Uint8List template = base64Decode(base64String);
           String id = jsonData['id'];
-          mOneTemplateBuf = template;
+          _secugenBlePlugin.mOneTemplateBuf = template;
           print('NFC Data Id: $id  - template: template');
           setState(() {
             _status = 'NFC Data: $jsonData';
@@ -394,7 +189,7 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
   }
 
   Future<void> writeIntoNfc() async {
-    if (mOneTemplateBuf.isNotEmpty) {
+    if (_secugenBlePlugin.mOneTemplateBuf.isNotEmpty) {
       try {
         // Avvia la scansione NFC
         NFCTag tag = await FlutterNfcKit.poll();
@@ -403,7 +198,8 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
         if (tag.ndefWritable != null) {
           // Converti la stringa JSON in Uint8List
           // Converti il JSON in stringa
-          String jsonString = jsonEncode(createJsonTemplate(mOneTemplateBuf));
+          String jsonString =
+              jsonEncode(createJsonTemplate(_secugenBlePlugin.mOneTemplateBuf));
           Uint8List jsonData = Uint8List.fromList(utf8.encode(jsonString));
           int dataSize = jsonData.length;
           print("dataSize: $dataSize");
@@ -466,16 +262,6 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  Future<void> getVersion() async {
-    final characteristicWrite = QualifiedCharacteristic(
-        serviceId: SERVICE_SECUGEN_SPP_OVER_BLE,
-        characteristicId: CHARACTERISTIC_WRITE,
-        deviceId: widget.viewModel.deviceId);
-
-    await _ble.writeCharacteristicWithResponse(characteristicWrite,
-        value: await _secugenBlePlugin.getVersion());
-  }
-
   @override
   Widget build(BuildContext context) => CustomScrollView(
         slivers: [
@@ -511,6 +297,18 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
+                const SizedBox(
+                  height: 10,
+                ),
+                ValueListenableBuilder<int>(
+                  valueListenable: _secugenBlePlugin.progressNotifier,
+                  builder: (context, progress, child) {
+                    return LinearProgressIndicator(value: progress / 100.0);
+                  },
+                ),
+                const SizedBox(
+                  height: 10,
+                ),
                 Padding(
                   padding: const EdgeInsets.only(top: 16.0),
                   child: Wrap(
@@ -520,11 +318,8 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
                         onPressed: () async {
                           if (!widget.viewModel.deviceConnected) {
                             await widget.viewModel.connect();
-                            final characteristicRead = QualifiedCharacteristic(
-                                serviceId: SERVICE_SECUGEN_SPP_OVER_BLE,
-                                characteristicId: CHARACTERISTIC_READ_NOTIFY,
-                                deviceId: widget.viewModel.deviceId);
-                            await enableNotifications(characteristicRead);
+                            await _secugenBlePlugin.enableNotifications(
+                                _ble, widget.viewModel.deviceId);
                           }
                         },
                         child: const Text("Connect"),
@@ -542,15 +337,21 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
                         child: const Text("Discover Services"),
                       ),
                       ElevatedButton(
-                        onPressed: widget.viewModel.deviceConnected
-                            ? getVersion
-                            : null,
+                        onPressed: () async {
+                          if (widget.viewModel.deviceConnected) {
+                            await _secugenBlePlugin.getDeviceVersion(
+                                _ble, widget.viewModel.deviceId);
+                          }
+                        },
                         child: const Text("Get Version"),
                       ),
                       ElevatedButton(
-                        onPressed: widget.viewModel.deviceConnected
-                            ? getTemplate
-                            : null,
+                        onPressed: () async {
+                          if (widget.viewModel.deviceConnected) {
+                            await _secugenBlePlugin.getFingerPrintTemplate(
+                                _ble, widget.viewModel.deviceId);
+                          }
+                        },
                         child: const Text("Get Template"),
                       ),
                       ElevatedButton(
@@ -565,9 +366,12 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
                         child: const Text("Read Template Nfc"),
                       ),
                       ElevatedButton(
-                        onPressed: widget.viewModel.deviceConnected
-                            ? instantVerifyExtraData
-                            : null,
+                        onPressed: () async {
+                          if (widget.viewModel.deviceConnected) {
+                            await _secugenBlePlugin.instantVerifyFingerprint(
+                                _ble, widget.viewModel.deviceId);
+                          }
+                        },
                         child: const Text("Instant Verify"),
                       ),
                     ],
