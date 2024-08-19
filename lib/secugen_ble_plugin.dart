@@ -370,7 +370,7 @@ class SecugenBlePlugin {
           mOneTemplateBuf = template;
           addLog('NFC Data Success Id: $id  - template: $template');
           _completerReadNfc?.complete(OperationResult.success(
-              "NFC Data Success Id: $id  - template: $template"));
+              "NFC Read Data Success Id: $id  - template: $template"));
         } else {
           addLog('No NDEF records found!');
 
@@ -390,6 +390,6 @@ class SecugenBlePlugin {
       _completerReadNfc
           ?.complete(OperationResult.error("Error reading NFC tag: $e"));
     }
-    return _completerWriteNfc!.future;
+    return _completerReadNfc!.future;
   }
 }
