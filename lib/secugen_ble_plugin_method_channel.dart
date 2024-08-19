@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:secugen_ble_plugin/utils/SgfplibException_exception.dart';

@@ -1,8 +1,6 @@
-import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:secugen_ble_plugin/utils/fmsheader.dart';
 
 import 'secugen_ble_plugin_method_channel.dart';
 
