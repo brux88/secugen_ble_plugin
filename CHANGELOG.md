@@ -28,3 +28,7 @@
 ## 0.0.7
 
 * Fix dispose method
+
+## 0.0.8
+
+* Fix2 dispose method

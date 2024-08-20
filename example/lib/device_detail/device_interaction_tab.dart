@@ -214,11 +214,18 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
                                 await _secugenBlePlugin.getFingerPrintTemplate(
                                     _ble, widget.viewModel.deviceId);
                             setState(() {
-                              _status = result.message;
+                              _status =
+                                  "${result.message} - ${DateTime.timestamp().toIso8601String()}";
                             });
                           }
                         },
                         child: const Text("Get Template"),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          showFingerPrintBottomSheet(context);
+                        },
+                        child: const Text("Open BottomSheet Register Fp"),
                       ),
                       ElevatedButton(
                         onPressed: () async {
@@ -268,6 +275,32 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
           ),
         ],
       );
+
+  void showFingerPrintBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          child: ElevatedButton(
+            onPressed: () async {
+              {
+                if (widget.viewModel.deviceConnected) {
+                  var result = await _secugenBlePlugin.getFingerPrintTemplate(
+                      _ble, widget.viewModel.deviceId);
+                  setState(() {
+                    _status =
+                        "${result.message} - ${DateTime.timestamp().toIso8601String()}";
+                  });
+                }
+              }
+            },
+            child: const Text("Get Template"),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _ServiceDiscoveryList extends StatefulWidget {
