@@ -24,7 +24,15 @@ class SecugenBlePlugin {
   StreamController<NfcOperationStatus> _statusStreamController =
       StreamController<NfcOperationStatus>.broadcast();
 
-  Stream<NfcOperationStatus> get statusStream => _statusStreamController.stream;
+  //Stream<NfcOperationStatus> get statusStream => _statusStreamController.stream;
+
+  Stream<NfcOperationStatus> get statusStream {
+    if (_statusStreamController.isClosed) {
+      _statusStreamController =
+          StreamController<NfcOperationStatus>.broadcast();
+    }
+    return _statusStreamController!.stream;
+  }
 
   bool _isRegisterFingerPrintCompleted = false;
   bool _isVerifyFingerPrintCompleted = false;
@@ -40,6 +48,8 @@ class SecugenBlePlugin {
   static const int errNone = 0x00; // Nomrale Operazione
   static const int errVerifyFailed =
       0x04; // Errore di verifica dell'impronta digitale
+  static const int errTimeout =
+      0x08; // Errore di verifica dell'impronta digitale
   static const int errInvalidFormat = 0x30; //  Record format is invalid
   StreamController<String> _logController =
       StreamController<String>.broadcast();
@@ -301,6 +311,8 @@ class SecugenBlePlugin {
         } else if (mCurrentCommand == PK_COMMAND_VERIFY ||
             mCurrentCommand == PK_COMMAND_VERSION) {
           processCapturedData(data);
+        } else if (mCurrentCommand == PK_COMMAND_TEMPLATE) {
+          processCapturedData(data);
         }
       }
     }
@@ -329,6 +341,10 @@ class SecugenBlePlugin {
           completeRegisterFingerPrint(
               (OperationResult.success("Template Completed")));
 
+          break;
+        case errTimeout:
+          addLog("Error Timeout");
+          completeRegisterFingerPrint(OperationResult.error("Error Timeout"));
           break;
         default:
           completeRegisterFingerPrint(

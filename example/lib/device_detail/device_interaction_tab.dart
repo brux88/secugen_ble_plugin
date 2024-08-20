@@ -92,6 +92,7 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
   late List<Service> discoveredServices;
   late SecugenBlePlugin _secugenBlePlugin;
   final FlutterReactiveBle _ble = FlutterReactiveBle();
+  StreamSubscription<NfcOperationStatus>? _statusSubscription;
 
   String _status = "";
   List<int> mTransferBuffer = [];
@@ -104,14 +105,27 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
     _secugenBlePlugin = SecugenBlePlugin();
 
 // Ascolta gli aggiornamenti dello stato
-    _secugenBlePlugin.statusStream.listen((status) {
+    /*_secugenBlePlugin.statusStream.listen((status) {
       // Aggiorna lo stato dell'interfaccia utente
       setState(() {
         _handleStatusUpdate(status);
       });
-    });
+    });*/
+    _startListeningToStatusUpdates();
 
     mTransferBuffer = _secugenBlePlugin.mTransferBuffer;
+  }
+
+  void _startListeningToStatusUpdates() {
+    // Cancella la vecchia subscription se esiste
+    _statusSubscription?.cancel();
+
+    // Avvia una nuova subscription allo stream
+    _statusSubscription = _secugenBlePlugin.statusStream.listen((status) {
+      setState(() {
+        _handleStatusUpdate(status);
+      });
+    });
   }
 
   void _handleStatusUpdate(NfcOperationStatus status) {
@@ -155,6 +169,7 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
 
   @override
   void dispose() {
+    _statusSubscription?.cancel();
     super.dispose();
   }
 
@@ -330,34 +345,53 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
         ],
       );
 
-  void showFingerPrintBottomSheet(BuildContext context) {
-    showModalBottomSheet(
+  void showFingerPrintBottomSheet(BuildContext context) async {
+    await showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
         final _secugenBlePlugin2 = SecugenBlePlugin();
 
         return Container(
           padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton(
-            onPressed: () async {
-              {
-                if (widget.viewModel.deviceConnected) {
-                  await _secugenBlePlugin2.enableNotifications(
-                      _ble, widget.viewModel.deviceId);
-                  var result = await _secugenBlePlugin2.getFingerPrintTemplate(
-                      _ble, widget.viewModel.deviceId);
-                  setState(() {
-                    _status =
-                        "${result.message} - ${DateTime.timestamp().toIso8601String()}";
-                  });
-                }
-              }
-            },
-            child: const Text("Get Template"),
+          child: Column(
+            children: [
+              ElevatedButton(
+                onPressed: () async {
+                  if (widget.viewModel.deviceConnected) {
+                    var idFake = guid.Uuid().v4();
+                    var result = await _secugenBlePlugin.writeIntoNfc(idFake);
+                    setState(() {
+                      _status = result.message;
+                    });
+                  }
+                },
+                child: const Text("Write Template Nfc"),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  {
+                    if (widget.viewModel.deviceConnected) {
+                      await _secugenBlePlugin2.enableNotifications(
+                          _ble, widget.viewModel.deviceId);
+                      var result =
+                          await _secugenBlePlugin2.getFingerPrintTemplate(
+                              _ble, widget.viewModel.deviceId);
+                      setState(() {
+                        _status =
+                            "${result.message} - ${DateTime.timestamp().toIso8601String()}";
+                      });
+                    }
+                  }
+                },
+                child: const Text("Get Template"),
+              ),
+            ],
           ),
         );
       },
     );
+    _secugenBlePlugin.dispose();
+    _startListeningToStatusUpdates();
   }
 }
 
