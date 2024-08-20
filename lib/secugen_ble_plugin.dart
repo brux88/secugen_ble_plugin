@@ -20,9 +20,11 @@ class SecugenBlePlugin {
   Completer<OperationResult>? _completerWriteNfc;
   Completer<OperationResult>? _completerReadNfc;
 
-  final Function(NfcOperationStatus)? onStatusUpdateWriteNfc;
-  final Function(NfcOperationStatus)? onStatusUpdateReadNfc;
-  SecugenBlePlugin({this.onStatusUpdateWriteNfc, this.onStatusUpdateReadNfc});
+  // Stream controller per aggiornamenti dello stato
+  final StreamController<NfcOperationStatus> _statusStreamController =
+      StreamController<NfcOperationStatus>.broadcast();
+
+  Stream<NfcOperationStatus> get statusStream => _statusStreamController.stream;
 
   bool _isRegisterFingerPrintCompleted = false;
   bool _isVerifyFingerPrintCompleted = false;
@@ -100,6 +102,13 @@ class SecugenBlePlugin {
 
   void updateProgress(int progress) {
     progressNotifier.value = progress;
+  }
+
+// Metodi per aggiungere e gestire lo stato
+  void _sendStatusUpdateNfc(NfcOperationStatus status) {
+    if (!_statusStreamController.isClosed) {
+      _statusStreamController.add(status);
+    }
   }
 
   // Metodo per inizializzare il StreamController
@@ -407,6 +416,8 @@ class SecugenBlePlugin {
 
   void dispose() {
     _logController.close();
+    _statusStreamController.close();
+
     cancelPendingOperations();
   }
 
@@ -422,12 +433,12 @@ class SecugenBlePlugin {
     if (mOneTemplateBuf.isNotEmpty) {
       try {
         // Notifica che siamo in attesa di una card NFC
-        onStatusUpdateWriteNfc?.call(NfcOperationStatus.waitingForCard);
+        _sendStatusUpdateNfc(NfcOperationStatus.waitingForCard);
         // Avvia la scansione NFC
         NFCTag tag = await FlutterNfcKit.poll();
 
         if (tag.ndefWritable != null) {
-          onStatusUpdateWriteNfc?.call(NfcOperationStatus.writing);
+          _sendStatusUpdateNfc(NfcOperationStatus.writing);
 
           TemplateNFC templateNfc = createTemplate(id, mOneTemplateBuf);
 
@@ -443,12 +454,12 @@ class SecugenBlePlugin {
           await FlutterNfcKit.writeNDEFRecords([record]);
 
           addLog("Template scritto con successo sulla scheda NFC!");
-          onStatusUpdateWriteNfc?.call(NfcOperationStatus.writeSuccess);
+          _sendStatusUpdateNfc(NfcOperationStatus.writeSuccess);
 
           completeWriteNfc(OperationResult.success(
               "Template scritto con successo sulla scheda NFC!"));
         } else {
-          onStatusUpdateWriteNfc?.call(NfcOperationStatus.writeFailure);
+          _sendStatusUpdateNfc(NfcOperationStatus.writeFailure);
 
           addLog("Il tag NFC non è scrivibile");
           completeWriteNfc(
@@ -456,7 +467,7 @@ class SecugenBlePlugin {
         }
         return _completerWriteNfc!.future;
       } catch (e) {
-        onStatusUpdateWriteNfc?.call(NfcOperationStatus.error);
+        _sendStatusUpdateNfc(NfcOperationStatus.error);
 
         addLog("Errore durante la scrittura del template sulla scheda NFC: $e");
         completeWriteNfc(OperationResult.error(
@@ -485,12 +496,12 @@ class SecugenBlePlugin {
     startNewReadNfcOperation();
     try {
       // Poll per trovare il tag NFC
-      onStatusUpdateWriteNfc?.call(NfcOperationStatus.waitingForCard);
+      _sendStatusUpdateNfc(NfcOperationStatus.waitingForCard);
       NFCTag tag = await FlutterNfcKit.poll();
 
       // Assicurati che il tag sia NDEF
       if (tag.ndefAvailable!) {
-        onStatusUpdateReadNfc?.call(NfcOperationStatus.reading);
+        _sendStatusUpdateNfc(NfcOperationStatus.reading);
         // Leggi i record NDEF dal tag
         List<ndef.NDEFRecord> records = await FlutterNfcKit.readNDEFRecords();
         if (records.isNotEmpty) {
@@ -506,18 +517,18 @@ class SecugenBlePlugin {
           String id = jsonData['id'];
           mOneTemplateBuf = template;
           addLog('NFC Data Success Id: $id  - template: $template');
-          onStatusUpdateReadNfc?.call(NfcOperationStatus.readSuccess);
+          _sendStatusUpdateNfc(NfcOperationStatus.readSuccess);
           completeReadNfc(OperationResult.success(
               "NFC Read Data Success Id: $id  - template: $template"));
         } else {
           addLog('No NDEF records found!');
-          onStatusUpdateReadNfc?.call(NfcOperationStatus.readFailure);
+          _sendStatusUpdateNfc(NfcOperationStatus.readFailure);
 
           completeReadNfc(OperationResult.error("No NDEF records found!"));
         }
       } else {
         addLog('NDEF not available on this tag!');
-        onStatusUpdateReadNfc?.call(NfcOperationStatus.readFailure);
+        _sendStatusUpdateNfc(NfcOperationStatus.readFailure);
         completeReadNfc(
             OperationResult.error("NDEF not available on this tag!"));
       }
@@ -525,7 +536,7 @@ class SecugenBlePlugin {
       // Disconnessione NFC
       //await FlutterNfcKit.finish(iosAlertMessage: "Finished!");
     } catch (e) {
-      onStatusUpdateReadNfc?.call(NfcOperationStatus.error);
+      _sendStatusUpdateNfc(NfcOperationStatus.error);
       addLog('Error reading NFC tag: $e');
       completeReadNfc(OperationResult.error("Error reading NFC tag: $e"));
     }

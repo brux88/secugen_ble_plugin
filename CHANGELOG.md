@@ -40,3 +40,7 @@
 ## 0.0.10
 
 * Add Status Nfc Operation
+
+## 0.0.11
+
+* Change status event stream

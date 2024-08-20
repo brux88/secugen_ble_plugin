@@ -4,6 +4,7 @@ import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:functional_data/functional_data.dart';
 import 'package:provider/provider.dart';
 import 'package:secugen_ble_plugin/secugen_ble_plugin.dart';
+import 'package:secugen_ble_plugin/utils/enum.dart';
 
 import 'package:secugen_ble_plugin_example/ble/ble_device_connector.dart';
 import 'package:secugen_ble_plugin_example/ble/ble_device_interactor.dart';
@@ -100,18 +101,56 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
     discoveredServices = [];
     super.initState();
 
-    _secugenBlePlugin = SecugenBlePlugin(onStatusUpdateWriteNfc: (status) {
+    _secugenBlePlugin = SecugenBlePlugin();
+
+// Ascolta gli aggiornamenti dello stato
+    _secugenBlePlugin.statusStream.listen((status) {
+      // Aggiorna lo stato dell'interfaccia utente
       setState(() {
-        _status = status
-            .toString(); // Utilizza enum.toString() o una mappa per la traduzione
-      });
-    }, onStatusUpdateReadNfc: (status) {
-      setState(() {
-        _status = status
-            .toString(); // Utilizza enum.toString() o una mappa per la traduzione
+        _handleStatusUpdate(status);
       });
     });
+
     mTransferBuffer = _secugenBlePlugin.mTransferBuffer;
+  }
+
+  void _handleStatusUpdate(NfcOperationStatus status) {
+    switch (status) {
+      case NfcOperationStatus.waitingForCard:
+        print("In attesa di una card NFC");
+        setState(() {
+          _status = "In attesa di una card NFC";
+        });
+        break;
+      case NfcOperationStatus.writing:
+        print("In fase di scrittura");
+        setState(() {
+          _status = "In fase di scrittura";
+        });
+        break;
+      case NfcOperationStatus.writeSuccess:
+        print("Scrittura completata con successo");
+        setState(() {
+          _status = "Scrittura completata con successo";
+        });
+        break;
+      case NfcOperationStatus.writeFailure:
+        print("Scrittura fallita");
+        setState(() {
+          _status = "Scrittura fallita";
+        });
+        break;
+      case NfcOperationStatus.error:
+        print("Errore durante l'operazione");
+        setState(() {
+          _status = "Errore durante l'operazione";
+        });
+        break;
+      default:
+        setState(() {
+          _status = "In attesa di una card NFC";
+        });
+    }
   }
 
   @override
