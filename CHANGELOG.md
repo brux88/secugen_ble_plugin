@@ -11,3 +11,20 @@
 ## 0.0.3
 
 * Add Nfc Method
+
+## 0.0.4
+
+* Fix Nfc Method
+
+
+## 0.0.5
+
+* Fix2 Nfc Method
+
+## 0.0.6
+
+* Add dispose method
+
+## 0.0.7
+
+* Fix dispose method

@@ -102,6 +102,40 @@ class SecugenBlePlugin {
     _logController.add(message);
   }
 
+  void cancelPendingOperations() {
+    // Completa i completer con un errore o cancella se non sono già completati
+    if (_isRegisterFingerPrintCompleted &&
+        _completerRegisterFingerPrint != null) {
+      _completerRegisterFingerPrint!.completeError("Operation cancelled");
+      _completerRegisterFingerPrint = null;
+      _isRegisterFingerPrintCompleted = false;
+    }
+
+    if (_isVerifyFingerPrintCompleted && _completerVerifyFingerPrint != null) {
+      _completerVerifyFingerPrint!.completeError("Operation cancelled");
+      _completerVerifyFingerPrint = null;
+      _isVerifyFingerPrintCompleted = false;
+    }
+
+    if (_isVersionDeviceCompleted && _completerVersionDevice != null) {
+      _completerVersionDevice!.completeError("Operation cancelled");
+      _completerVersionDevice = null;
+      _isVersionDeviceCompleted = false;
+    }
+
+    if (_isWriteNfcCompleted && _completerWriteNfc != null) {
+      _completerWriteNfc!.completeError("Operation cancelled");
+      _completerWriteNfc = null;
+      _isWriteNfcCompleted = false;
+    }
+
+    if (_isReadNfcCompleted && _completerReadNfc != null) {
+      _completerReadNfc!.completeError("Operation cancelled");
+      _completerReadNfc = null;
+      _isReadNfcCompleted = false;
+    }
+  }
+
   void startNewRegisterFingerPrintOperation() {
     // Reset the completer and the flag for a new operation
     _completerRegisterFingerPrint = Completer<OperationResult>();
@@ -360,6 +394,7 @@ class SecugenBlePlugin {
 
   void dispose() {
     _logController.close();
+    cancelPendingOperations();
   }
 
   //NFC
