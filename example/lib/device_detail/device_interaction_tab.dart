@@ -9,6 +9,7 @@ import 'package:secugen_ble_plugin_example/ble/ble_device_connector.dart';
 import 'package:secugen_ble_plugin_example/ble/ble_device_interactor.dart';
 
 import 'characteristic_interaction_dialog.dart';
+import 'package:uuid/uuid.dart' as guid;
 
 part 'device_interaction_tab.g.dart';
 
@@ -88,7 +89,7 @@ class _DeviceInteractionTab extends StatefulWidget {
 
 class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
   late List<Service> discoveredServices;
-  final _secugenBlePlugin = SecugenBlePlugin();
+  late SecugenBlePlugin _secugenBlePlugin;
   final FlutterReactiveBle _ble = FlutterReactiveBle();
 
   String _status = "";
@@ -98,6 +99,18 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
   void initState() {
     discoveredServices = [];
     super.initState();
+
+    _secugenBlePlugin = SecugenBlePlugin(onStatusUpdateWriteNfc: (status) {
+      setState(() {
+        _status = status
+            .toString(); // Utilizza enum.toString() o una mappa per la traduzione
+      });
+    }, onStatusUpdateReadNfc: (status) {
+      setState(() {
+        _status = status
+            .toString(); // Utilizza enum.toString() o una mappa per la traduzione
+      });
+    });
     mTransferBuffer = _secugenBlePlugin.mTransferBuffer;
   }
 
@@ -230,7 +243,9 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
                       ElevatedButton(
                         onPressed: () async {
                           if (widget.viewModel.deviceConnected) {
-                            var result = await _secugenBlePlugin.writeIntoNfc();
+                            var idFake = guid.Uuid().v4();
+                            var result =
+                                await _secugenBlePlugin.writeIntoNfc(idFake);
                             setState(() {
                               _status = result.message;
                             });
@@ -280,13 +295,17 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
     showModalBottomSheet(
       context: context,
       builder: (BuildContext context) {
+        final _secugenBlePlugin2 = SecugenBlePlugin();
+
         return Container(
           padding: const EdgeInsets.all(16.0),
           child: ElevatedButton(
             onPressed: () async {
               {
                 if (widget.viewModel.deviceConnected) {
-                  var result = await _secugenBlePlugin.getFingerPrintTemplate(
+                  await _secugenBlePlugin2.enableNotifications(
+                      _ble, widget.viewModel.deviceId);
+                  var result = await _secugenBlePlugin2.getFingerPrintTemplate(
                       _ble, widget.viewModel.deviceId);
                   setState(() {
                     _status =

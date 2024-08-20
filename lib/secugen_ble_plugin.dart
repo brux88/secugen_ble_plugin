@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
+import 'package:secugen_ble_plugin/utils/enum.dart';
 import 'package:secugen_ble_plugin/utils/fmsdata.dart';
 import 'package:secugen_ble_plugin/utils/fmsheader.dart';
 import 'package:secugen_ble_plugin/utils/fmstemplatefile.dart';
@@ -18,6 +19,10 @@ class SecugenBlePlugin {
   Completer<OperationResult>? _completerVersionDevice;
   Completer<OperationResult>? _completerWriteNfc;
   Completer<OperationResult>? _completerReadNfc;
+
+  final Function(NfcOperationStatus)? onStatusUpdateWriteNfc;
+  final Function(NfcOperationStatus)? onStatusUpdateReadNfc;
+  SecugenBlePlugin({this.onStatusUpdateWriteNfc, this.onStatusUpdateReadNfc});
 
   bool _isRegisterFingerPrintCompleted = false;
   bool _isVerifyFingerPrintCompleted = false;
@@ -34,7 +39,7 @@ class SecugenBlePlugin {
   static const int errVerifyFailed =
       0x04; // Errore di verifica dell'impronta digitale
   static const int errInvalidFormat = 0x30; //  Record format is invalid
-  final StreamController<String> _logController =
+  StreamController<String> _logController =
       StreamController<String>.broadcast();
   Stream<String> get logStream => _logController.stream;
   ValueNotifier<int> progressNotifier = ValueNotifier<int>(0);
@@ -97,8 +102,21 @@ class SecugenBlePlugin {
     progressNotifier.value = progress;
   }
 
+  // Metodo per inizializzare il StreamController
+  void _initializeLogController() {
+    if (_logController.isClosed) {
+      _logController = StreamController<String>.broadcast();
+    }
+  }
+
   void addLog(String message) {
     print(message);
+    // Verifica se il StreamController è chiuso
+    if (_logController.isClosed) {
+      // Se è chiuso, ri-inizializza
+      _initializeLogController();
+    }
+
     _logController.add(message);
   }
 
@@ -394,20 +412,24 @@ class SecugenBlePlugin {
 
   //NFC
 // Metodo per creare e serializzare il Template in JSON
-  TemplateNFC createTemplate(Uint8List template) {
-    return TemplateNFC.fromUint8List(template);
+  TemplateNFC createTemplate(String id, Uint8List template) {
+    return TemplateNFC.fromUint8List(id, template);
   }
 
-  Future<OperationResult> writeIntoNfc() async {
+  Future<OperationResult> writeIntoNfc(String id) async {
     startNewWriteNfcOperation();
 
     if (mOneTemplateBuf.isNotEmpty) {
       try {
+        // Notifica che siamo in attesa di una card NFC
+        onStatusUpdateWriteNfc?.call(NfcOperationStatus.waitingForCard);
         // Avvia la scansione NFC
         NFCTag tag = await FlutterNfcKit.poll();
 
         if (tag.ndefWritable != null) {
-          TemplateNFC templateNfc = createTemplate(mOneTemplateBuf);
+          onStatusUpdateWriteNfc?.call(NfcOperationStatus.writing);
+
+          TemplateNFC templateNfc = createTemplate(id, mOneTemplateBuf);
 
           String jsonString = jsonEncode(templateNfc.toJson());
           Uint8List jsonData = Uint8List.fromList(utf8.encode(jsonString));
@@ -421,22 +443,28 @@ class SecugenBlePlugin {
           await FlutterNfcKit.writeNDEFRecords([record]);
 
           addLog("Template scritto con successo sulla scheda NFC!");
+          onStatusUpdateWriteNfc?.call(NfcOperationStatus.writeSuccess);
+
           completeWriteNfc(OperationResult.success(
               "Template scritto con successo sulla scheda NFC!"));
         } else {
+          onStatusUpdateWriteNfc?.call(NfcOperationStatus.writeFailure);
+
           addLog("Il tag NFC non è scrivibile");
           completeWriteNfc(
               OperationResult.error("Il tag NFC non è scrivibile"));
         }
         return _completerWriteNfc!.future;
       } catch (e) {
+        onStatusUpdateWriteNfc?.call(NfcOperationStatus.error);
+
         addLog("Errore durante la scrittura del template sulla scheda NFC: $e");
         completeWriteNfc(OperationResult.error(
             "Errore durante la scrittura del template sulla scheda NFC: $e"));
         return _completerWriteNfc!.future;
       } finally {
         // Termina la sessione NFC
-        await FlutterNfcKit.finish();
+        //  await FlutterNfcKit.finish();
       }
     } else {
       addLog("Template not found");
@@ -444,14 +472,25 @@ class SecugenBlePlugin {
     }
   }
 
+  void closeNfcSession() async {
+    try {
+      await FlutterNfcKit.finish();
+      addLog("Sessione NFC chiusa con successo");
+    } catch (e) {
+      addLog("Errore durante la chiusura della sessione NFC: $e");
+    }
+  }
+
   Future<OperationResult> readNfc() async {
     startNewReadNfcOperation();
     try {
       // Poll per trovare il tag NFC
+      onStatusUpdateWriteNfc?.call(NfcOperationStatus.waitingForCard);
       NFCTag tag = await FlutterNfcKit.poll();
 
       // Assicurati che il tag sia NDEF
       if (tag.ndefAvailable!) {
+        onStatusUpdateReadNfc?.call(NfcOperationStatus.reading);
         // Leggi i record NDEF dal tag
         List<ndef.NDEFRecord> records = await FlutterNfcKit.readNDEFRecords();
         if (records.isNotEmpty) {
@@ -467,22 +506,26 @@ class SecugenBlePlugin {
           String id = jsonData['id'];
           mOneTemplateBuf = template;
           addLog('NFC Data Success Id: $id  - template: $template');
+          onStatusUpdateReadNfc?.call(NfcOperationStatus.readSuccess);
           completeReadNfc(OperationResult.success(
               "NFC Read Data Success Id: $id  - template: $template"));
         } else {
           addLog('No NDEF records found!');
+          onStatusUpdateReadNfc?.call(NfcOperationStatus.readFailure);
 
           completeReadNfc(OperationResult.error("No NDEF records found!"));
         }
       } else {
         addLog('NDEF not available on this tag!');
+        onStatusUpdateReadNfc?.call(NfcOperationStatus.readFailure);
         completeReadNfc(
             OperationResult.error("NDEF not available on this tag!"));
       }
 
       // Disconnessione NFC
-      await FlutterNfcKit.finish(iosAlertMessage: "Finished!");
+      //await FlutterNfcKit.finish(iosAlertMessage: "Finished!");
     } catch (e) {
+      onStatusUpdateReadNfc?.call(NfcOperationStatus.error);
       addLog('Error reading NFC tag: $e');
       completeReadNfc(OperationResult.error("Error reading NFC tag: $e"));
     }

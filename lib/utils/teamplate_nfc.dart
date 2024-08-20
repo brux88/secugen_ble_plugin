@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:uuid/uuid.dart'; // Assicurati di avere il pacchetto uuid nel tuo pubspec.yaml
 
 class TemplateNFC {
   final String id;
@@ -9,8 +8,8 @@ class TemplateNFC {
   TemplateNFC({required this.id, required this.templateBase64});
 
   // Factory method per creare un Template dal Uint8List
-  factory TemplateNFC.fromUint8List(Uint8List template) {
-    String guid = Uuid().v4(); // Genera un GUID
+  factory TemplateNFC.fromUint8List(String id, Uint8List template) {
+    String guid = id; // Genera un GUID
     String templateBase64 =
         base64Encode(template); // Codifica il template in base64
     return TemplateNFC(id: guid, templateBase64: templateBase64);

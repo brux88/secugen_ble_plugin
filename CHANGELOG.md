@@ -32,3 +32,11 @@
 ## 0.0.8
 
 * Fix2 dispose method
+
+## 0.0.9
+
+* Fix addLog
+
+## 0.0.10
+
+* Add Status Nfc Operation
