@@ -21,7 +21,7 @@ class SecugenBlePlugin {
   Completer<OperationResult>? _completerReadNfc;
 
   // Stream controller per aggiornamenti dello stato
-  final StreamController<NfcOperationStatus> _statusStreamController =
+  StreamController<NfcOperationStatus> _statusStreamController =
       StreamController<NfcOperationStatus>.broadcast();
 
   Stream<NfcOperationStatus> get statusStream => _statusStreamController.stream;
@@ -106,8 +106,22 @@ class SecugenBlePlugin {
 
 // Metodi per aggiungere e gestire lo stato
   void _sendStatusUpdateNfc(NfcOperationStatus status) {
+    // Verifica se il StreamController è chiuso
+    if (_statusStreamController.isClosed) {
+      // Se è chiuso, ri-inizializza
+      _initializeStatusStreamController();
+    }
+
     if (!_statusStreamController.isClosed) {
       _statusStreamController.add(status);
+    }
+  }
+
+  // Metodo per inizializzare il StreamController
+  void _initializeStatusStreamController() {
+    if (_statusStreamController.isClosed) {
+      _statusStreamController =
+          StreamController<NfcOperationStatus>.broadcast();
     }
   }
 
@@ -162,6 +176,7 @@ class SecugenBlePlugin {
     // Reset the completer and the flag for a new operation
     _completerRegisterFingerPrint = Completer<OperationResult>();
     _isRegisterFingerPrintCompleted = false;
+    progressNotifier = ValueNotifier<int>(0);
   }
 
   void startNewWriteNfcOperation() {
@@ -309,7 +324,7 @@ class SecugenBlePlugin {
           fmsTemplate.write(data!.get(), data.dLength, 1);
 
           copyToBuffer(data.get(), data.dLength);
-
+          updateProgress(0);
           addLog("Template Completed");
           completeRegisterFingerPrint(
               (OperationResult.success("Template Completed")));

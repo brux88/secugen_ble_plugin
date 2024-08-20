@@ -48,3 +48,11 @@
 ## 0.0.12
 
 * Add dispose nfc operation
+
+## 0.0.13
+
+*Fix Status nfc operation
+
+## 0.0.14
+
+*Fix2 Status nfc operation
