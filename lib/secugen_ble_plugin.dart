@@ -417,7 +417,7 @@ class SecugenBlePlugin {
   void dispose() {
     _logController.close();
     _statusStreamController.close();
-
+    closeNfcSession();
     cancelPendingOperations();
   }
 

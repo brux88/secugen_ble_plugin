@@ -44,3 +44,7 @@
 ## 0.0.11
 
 * Change status event stream
+
+## 0.0.12
+
+* Add dispose nfc operation
