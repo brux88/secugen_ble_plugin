@@ -60,3 +60,7 @@
 ## 0.0.15
 
 *Add error Timeout
+
+## 0.0.16
+
+*Return payload result Operation Nfc

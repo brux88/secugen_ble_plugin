@@ -31,7 +31,7 @@ class SecugenBlePlugin {
       _statusStreamController =
           StreamController<NfcOperationStatus>.broadcast();
     }
-    return _statusStreamController!.stream;
+    return _statusStreamController.stream;
   }
 
   bool _isRegisterFingerPrintCompleted = false;
@@ -368,6 +368,10 @@ class SecugenBlePlugin {
           completeVerifyFingerPrint(OperationResult.error("Format is invalid"));
 
           break;
+        case errTimeout:
+          addLog("Error Timeout");
+          completeVerifyFingerPrint(OperationResult.error("Error Timeout"));
+          break;
         default:
           addLog("Error Verify Template");
           completeVerifyFingerPrint(
@@ -547,10 +551,15 @@ class SecugenBlePlugin {
           Uint8List template = base64Decode(base64String);
           String id = jsonData['id'];
           mOneTemplateBuf = template;
+
+          // Crea un'istanza di TemplateNFC
+          TemplateNFC templateNfc =
+              TemplateNFC(id: id, templateBase64: base64String);
           addLog('NFC Data Success Id: $id  - template: $template');
           _sendStatusUpdateNfc(NfcOperationStatus.readSuccess);
           completeReadNfc(OperationResult.success(
-              "NFC Read Data Success Id: $id  - template: $template"));
+              "NFC Read Data Success Id: $id  - template: $template",
+              templateNfc));
         } else {
           addLog('No NDEF records found!');
           _sendStatusUpdateNfc(NfcOperationStatus.readFailure);
