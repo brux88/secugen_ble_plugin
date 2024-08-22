@@ -56,7 +56,7 @@ class SecugenBlePlugin {
   Stream<String> get logStream => _logController.stream;
   ValueNotifier<int> progressNotifier = ValueNotifier<int>(0);
 
-  static const String SECUGEN_MAC_ADDRESS = "CC:35:5A";
+  String SECUGEN_MAC_ADDRESS = "CC:35:5A";
 
   static const int PACKET_HEADER_SIZE = 12;
   static const int IMG_WIDTH_MAX = 300;

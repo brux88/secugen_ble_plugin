@@ -69,3 +69,7 @@
 ## 0.0.17
 
 *Add MAc Address
+
+## 0.0.18
+
+*Change Public  MAc Address
