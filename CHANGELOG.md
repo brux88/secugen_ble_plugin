@@ -64,3 +64,8 @@
 ## 0.0.16
 
 *Return payload result Operation Nfc
+
+
+## 0.0.17
+
+*Add MAc Address
