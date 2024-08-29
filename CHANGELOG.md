@@ -73,3 +73,7 @@
 ## 0.0.18
 
 *Change Public  MAc Address
+
+## 0.0.19
+
+*Add Set Power Off Time 2h

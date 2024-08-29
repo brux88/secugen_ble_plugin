@@ -22,6 +22,7 @@ public class SecugenBlePlugin implements FlutterPlugin, MethodCallHandler {
     private final String METHOD_INIT = "initializeDevice";
 
 
+  private final String METHOD_SET_POWER_OFF_TIME_2H = "cmdSetPowerOffTime2H";
   private final String METHOD_GET_VERSION = "cmdGetVersion";
   private final String METHOD_PARSE_RESPONSE = "parseResponse";
   private final String METHOD_GET_TEMPLATE = "cmdGetTemplate";
@@ -68,6 +69,9 @@ public class SecugenBlePlugin implements FlutterPlugin, MethodCallHandler {
       case METHOD_GET_VERSION:
           getVersion(result,  call.arguments);
         break;
+      case METHOD_SET_POWER_OFF_TIME_2H:
+          setPowerOffTime2H(result,  call.arguments);
+        break;
       case METHOD_INSTANT_VERIFY_WITH_EXTRADATA:
          instantVerifyExtraData(result,  call.arguments);
         break;
@@ -91,6 +95,13 @@ public class SecugenBlePlugin implements FlutterPlugin, MethodCallHandler {
     byte[] versionBytes  = FMSAPI.cmdGetVersion();
     var i = FMSAPI.parseResponse(versionBytes);
     Log.e(TAG, "VERSION RESULT----- " + i);
+    result.success(versionBytes);
+  }
+
+   private void setPowerOffTime2H(MethodChannel.Result result,  Object arguments) {
+    byte[] versionBytes  = FMSAPI.cmdSetPowerOffTime2H();
+    var i = FMSAPI.parseResponse(versionBytes);
+    Log.e(TAG, "SET POWER OFF TIME RESULT----- " + i);
     result.success(versionBytes);
   }
 

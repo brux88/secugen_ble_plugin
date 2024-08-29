@@ -17,6 +17,7 @@ class SecugenBlePlugin {
   Completer<OperationResult>? _completerRegisterFingerPrint;
   Completer<OperationResult>? _completerVerifyFingerPrint;
   Completer<OperationResult>? _completerVersionDevice;
+  Completer<OperationResult>? _completerSetPowerOffTime2H;
   Completer<OperationResult>? _completerWriteNfc;
   Completer<OperationResult>? _completerReadNfc;
 
@@ -36,6 +37,7 @@ class SecugenBlePlugin {
 
   bool _isRegisterFingerPrintCompleted = false;
   bool _isVerifyFingerPrintCompleted = false;
+  bool _isSetPowerOffTime2HCompleted = false;
   bool _isVersionDeviceCompleted = false;
   bool _isWriteNfcCompleted = false;
   bool _isReadNfcCompleted = false;
@@ -77,6 +79,10 @@ class SecugenBlePlugin {
 
   Future<List<int>> getVersion() {
     return SecugenBlePluginPlatform.instance.getVersion();
+  }
+
+  Future<List<int>> setPowerOffTime2H() {
+    return SecugenBlePluginPlatform.instance.setPowerOffTime2H();
   }
 
   Future<String?> parseResponse(List<int> bytes) {
@@ -173,6 +179,11 @@ class SecugenBlePlugin {
       _isVersionDeviceCompleted = false;
     }
 
+    if (_isSetPowerOffTime2HCompleted && _completerSetPowerOffTime2H != null) {
+      _completerSetPowerOffTime2H = null;
+      _isSetPowerOffTime2HCompleted = false;
+    }
+
     if (_isWriteNfcCompleted && _completerWriteNfc != null) {
       _completerWriteNfc = null;
       _isWriteNfcCompleted = false;
@@ -207,6 +218,11 @@ class SecugenBlePlugin {
   }
 
   void startNewVersionDeviceOperation() {
+    _completerVersionDevice = Completer<OperationResult>();
+    _isVersionDeviceCompleted = false;
+  }
+
+  void startNewSetPowerOffTime2HOperation() {
     _completerVersionDevice = Completer<OperationResult>();
     _isVersionDeviceCompleted = false;
   }
@@ -411,6 +427,20 @@ class SecugenBlePlugin {
     } catch (e) {
       addLog("Failed to read characteristic: $e");
     }
+  }
+
+  Future<OperationResult> getPowerOffTime2H(
+      FlutterReactiveBle ble, String deviceId) async {
+    final characteristicWrite = QualifiedCharacteristic(
+        serviceId: SERVICE_SECUGEN_SPP_OVER_BLE,
+        characteristicId: CHARACTERISTIC_WRITE,
+        deviceId: deviceId);
+    _completerSetPowerOffTime2H = Completer<OperationResult>();
+    startNewSetPowerOffTime2HOperation();
+
+    await ble.writeCharacteristicWithResponse(characteristicWrite,
+        value: await setPowerOffTime2H());
+    return _completerSetPowerOffTime2H!.future;
   }
 
   Future<OperationResult> getDeviceVersion(

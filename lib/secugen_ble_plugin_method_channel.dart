@@ -49,6 +49,13 @@ class MethodChannelSecugenBlePlugin extends SecugenBlePluginPlatform {
     return version;
   }
 
+  @override
+  Future<List<int>> setPowerOffTime2H() async {
+    final setPoweroffTime =
+        await methodChannel.invokeMethod(METHOD_SET_POWER_OFF_TIME_2H);
+    return setPoweroffTime;
+  }
+
   SgfplibException _libException(PlatformException exception) {
     SgfplibException sgfplibException = SgfplibException();
 

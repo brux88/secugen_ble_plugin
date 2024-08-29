@@ -29,6 +29,7 @@ public class FMSAPI {
 	public static final byte CMD_DB_GET_FIRSTREC = 0x74;
 	public static final byte CMD_DB_GET_NEXTREC = 0x75;
 	public static final byte CMD_DB_DELETE_ALL = 0x76;
+	public static final byte CMD_SET_POWER_OFF_TIME = (byte)0xF7;
 
 	public static final byte CMD_FP_AUTO_IDENTIFY_START = (byte) 0xA1;
 	public static final byte CMD_FP_AUTO_IDENTIFY_STOP = (byte) 0xA2;
@@ -93,6 +94,15 @@ public class FMSAPI {
 		FMSHeader header = new FMSHeader();
 		header.pkt_command = CMD_MAKE_RECORD_START;
 		header.pkt_param1 = (short)fingerNumber;
+		header.setCheckSum();
+		return(header.get());
+	}
+
+		public static byte[] cmdSetPowerOffTime2H()
+	{
+		FMSHeader header = new FMSHeader();
+		header.pkt_command = CMD_SET_POWER_OFF_TIME;
+		header.pkt_param1 = (short)0x0078;
 		header.setCheckSum();
 		return(header.get());
 	}

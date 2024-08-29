@@ -331,6 +331,19 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
                         },
                         child: const Text("Instant Verify"),
                       ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (widget.viewModel.deviceConnected) {
+                            var result =
+                                await _secugenBlePlugin.getPowerOffTime2H(
+                                    _ble, widget.viewModel.deviceId);
+                            setState(() {
+                              _status = result.message;
+                            });
+                          }
+                        },
+                        child: const Text("Set Power off Time 2h"),
+                      ),
                     ],
                   ),
                 ),

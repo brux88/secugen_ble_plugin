@@ -33,6 +33,10 @@ abstract class SecugenBlePluginPlatform extends PlatformInterface {
     throw UnimplementedError('Version() has not been implemented.');
   }
 
+  Future<List<int>> setPowerOffTime2H() {
+    throw UnimplementedError('setPowerOffTime2H() has not been implemented.');
+  }
+
   Future<List<int>> getTemplate() {
     throw UnimplementedError('getTemplate() has not been implemented.');
   }
