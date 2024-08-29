@@ -268,8 +268,13 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
                       ElevatedButton(
                         onPressed: () async {
                           if (widget.viewModel.deviceConnected) {
-                            await _secugenBlePlugin.getDeviceVersion(
-                                _ble, widget.viewModel.deviceId);
+                            var result =
+                                await _secugenBlePlugin.getDeviceVersion(
+                                    _ble, widget.viewModel.deviceId);
+                            print(result);
+                            setState(() {
+                              _status = "${result.message} ";
+                            });
                           }
                         },
                         child: const Text("Get Version"),

@@ -77,3 +77,7 @@
 ## 0.0.19
 
 *Add Set Power Off Time 2h
+
+## 0.0.20
+
+*FIx Set Power Off Time 2h

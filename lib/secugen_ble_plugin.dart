@@ -65,6 +65,7 @@ class SecugenBlePlugin {
   static const int PK_COMMAND_CAPTURE = 67;
   static const int PK_COMMAND_VERIFY = 208;
   static const int PK_COMMAND_VERSION = 5;
+  static const int PK_COMMAND_SET_POWER_OFF_2H = 247;
   static const int PK_COMMAND_TEMPLATE = 64;
   static const int IMG_HEIGHT_MAX = 400;
   static const int IMG_SIZE_MAX = (IMG_WIDTH_MAX * IMG_HEIGHT_MAX);
@@ -223,8 +224,8 @@ class SecugenBlePlugin {
   }
 
   void startNewSetPowerOffTime2HOperation() {
-    _completerVersionDevice = Completer<OperationResult>();
-    _isVersionDeviceCompleted = false;
+    _completerSetPowerOffTime2H = Completer<OperationResult>();
+    _isSetPowerOffTime2HCompleted = false;
   }
 
   // Metodo per completare il completer in sicurezza
@@ -248,6 +249,13 @@ class SecugenBlePlugin {
     if (!_isVersionDeviceCompleted) {
       _completerVersionDevice?.complete(result);
       _isVersionDeviceCompleted = true;
+    }
+  }
+
+  void completeSetPowerOff2H(OperationResult result) {
+    if (!_isSetPowerOffTime2HCompleted) {
+      _completerSetPowerOffTime2H?.complete(result);
+      _isSetPowerOffTime2HCompleted = true;
     }
   }
 
@@ -327,7 +335,8 @@ class SecugenBlePlugin {
             updateProgress(100); // Completato
           }
         } else if (mCurrentCommand == PK_COMMAND_VERIFY ||
-            mCurrentCommand == PK_COMMAND_VERSION) {
+            mCurrentCommand == PK_COMMAND_VERSION ||
+            mCurrentCommand == PK_COMMAND_SET_POWER_OFF_2H) {
           processCapturedData(data);
         } else if (mCurrentCommand == PK_COMMAND_TEMPLATE) {
           processCapturedData(data);
@@ -407,6 +416,19 @@ class SecugenBlePlugin {
           addLog("Error Version");
           completeVersionDevice(OperationResult.error("Error Version"));
       }
+    } else if (header.pktCommand == PK_COMMAND_SET_POWER_OFF_2H) {
+      switch (header.pktError) {
+        case errNone:
+          var status = (await parseResponse(buffer)).toString();
+          addLog(status);
+          completeSetPowerOff2H(OperationResult.success(status));
+
+          break;
+        default:
+          addLog("Error Set Power Off 2h");
+          completeSetPowerOff2H(
+              OperationResult.error("Error Set Power Off 2h"));
+      }
     }
   }
 
@@ -435,7 +457,6 @@ class SecugenBlePlugin {
         serviceId: SERVICE_SECUGEN_SPP_OVER_BLE,
         characteristicId: CHARACTERISTIC_WRITE,
         deviceId: deviceId);
-    _completerSetPowerOffTime2H = Completer<OperationResult>();
     startNewSetPowerOffTime2HOperation();
 
     await ble.writeCharacteristicWithResponse(characteristicWrite,
