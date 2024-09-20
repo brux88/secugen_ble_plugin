@@ -56,6 +56,20 @@ class MethodChannelSecugenBlePlugin extends SecugenBlePluginPlatform {
     return setPoweroffTime;
   }
 
+  @override
+  Future<List<int>> setVerifySecurityLowLevel() async {
+    final setVerifySecurityLow =
+        await methodChannel.invokeMethod(METHOD_SET_VERIFY_LEVEL);
+    return setVerifySecurityLow;
+  }
+
+  @override
+  Future<List<int>> getVerifySecurityLevel() async {
+    final setVerifySecurityLow =
+        await methodChannel.invokeMethod(METHOD_GET_VERIFY_LEVEL);
+    return setVerifySecurityLow;
+  }
+
   SgfplibException _libException(PlatformException exception) {
     SgfplibException sgfplibException = SgfplibException();
 

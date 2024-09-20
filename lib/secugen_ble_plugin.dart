@@ -18,6 +18,8 @@ class SecugenBlePlugin {
   Completer<OperationResult>? _completerVerifyFingerPrint;
   Completer<OperationResult>? _completerVersionDevice;
   Completer<OperationResult>? _completerSetPowerOffTime2H;
+  Completer<OperationResult>? _completerSetVerifySecurityLowLevel;
+  Completer<OperationResult>? _completerGetSystemInfoSecurityLevel;
   Completer<OperationResult>? _completerWriteNfc;
   Completer<OperationResult>? _completerReadNfc;
 
@@ -38,6 +40,8 @@ class SecugenBlePlugin {
   bool _isRegisterFingerPrintCompleted = false;
   bool _isVerifyFingerPrintCompleted = false;
   bool _isSetPowerOffTime2HCompleted = false;
+  bool _isSetVerifySecurityLowLevelCompleted = false;
+  bool _isGetSystemInfoSecurityLevelCompleted = false;
   bool _isVersionDeviceCompleted = false;
   bool _isWriteNfcCompleted = false;
   bool _isReadNfcCompleted = false;
@@ -66,6 +70,8 @@ class SecugenBlePlugin {
   static const int PK_COMMAND_VERIFY = 208;
   static const int PK_COMMAND_VERSION = 5;
   static const int PK_COMMAND_SET_POWER_OFF_2H = 247;
+  static const int PK_COMMAND_SET_LEVEL_SECURITY_LOW = 0X20;
+  static const int PK_COMMAND_GET_LEVEL_SECURITY = 0X30;
   static const int PK_COMMAND_TEMPLATE = 64;
   static const int IMG_HEIGHT_MAX = 400;
   static const int IMG_SIZE_MAX = (IMG_WIDTH_MAX * IMG_HEIGHT_MAX);
@@ -84,6 +90,14 @@ class SecugenBlePlugin {
 
   Future<List<int>> setPowerOffTime2H() {
     return SecugenBlePluginPlatform.instance.setPowerOffTime2H();
+  }
+
+  Future<List<int>> getSystemInfoSecurityLevel() {
+    return SecugenBlePluginPlatform.instance.getVerifySecurityLevel();
+  }
+
+  Future<List<int>> setVerifySecurityLowLevel() {
+    return SecugenBlePluginPlatform.instance.setVerifySecurityLowLevel();
   }
 
   Future<String?> parseResponse(List<int> bytes) {
@@ -184,7 +198,16 @@ class SecugenBlePlugin {
       _completerSetPowerOffTime2H = null;
       _isSetPowerOffTime2HCompleted = false;
     }
-
+    if (_isSetVerifySecurityLowLevelCompleted &&
+        _completerSetVerifySecurityLowLevel != null) {
+      _completerSetVerifySecurityLowLevel = null;
+      _isSetVerifySecurityLowLevelCompleted = false;
+    }
+    if (_isGetSystemInfoSecurityLevelCompleted &&
+        _completerGetSystemInfoSecurityLevel != null) {
+      _completerGetSystemInfoSecurityLevel = null;
+      _isGetSystemInfoSecurityLevelCompleted = false;
+    }
     if (_isWriteNfcCompleted && _completerWriteNfc != null) {
       _completerWriteNfc = null;
       _isWriteNfcCompleted = false;
@@ -228,6 +251,16 @@ class SecugenBlePlugin {
     _isSetPowerOffTime2HCompleted = false;
   }
 
+  void startNewSetVerifySecurityLowLevelOperation() {
+    _completerSetVerifySecurityLowLevel = Completer<OperationResult>();
+    _isSetVerifySecurityLowLevelCompleted = false;
+  }
+
+  void startNewGetSystemInfoSecurityLevelOperation() {
+    _completerGetSystemInfoSecurityLevel = Completer<OperationResult>();
+    _isGetSystemInfoSecurityLevelCompleted = false;
+  }
+
   // Metodo per completare il completer in sicurezza
   void completeRegisterFingerPrint(OperationResult result) {
     if (!_isRegisterFingerPrintCompleted) {
@@ -256,6 +289,20 @@ class SecugenBlePlugin {
     if (!_isSetPowerOffTime2HCompleted) {
       _completerSetPowerOffTime2H?.complete(result);
       _isSetPowerOffTime2HCompleted = true;
+    }
+  }
+
+  void completeSetVerifySecurityLowLevel(OperationResult result) {
+    if (!_isSetVerifySecurityLowLevelCompleted) {
+      _completerSetVerifySecurityLowLevel?.complete(result);
+      _isSetVerifySecurityLowLevelCompleted = true;
+    }
+  }
+
+  void completeGetSystemInfoSecurityLevel(OperationResult result) {
+    if (!_isGetSystemInfoSecurityLevelCompleted) {
+      _completerGetSystemInfoSecurityLevel?.complete(result);
+      _isGetSystemInfoSecurityLevelCompleted = true;
     }
   }
 
@@ -336,7 +383,9 @@ class SecugenBlePlugin {
           }
         } else if (mCurrentCommand == PK_COMMAND_VERIFY ||
             mCurrentCommand == PK_COMMAND_VERSION ||
-            mCurrentCommand == PK_COMMAND_SET_POWER_OFF_2H) {
+            mCurrentCommand == PK_COMMAND_SET_POWER_OFF_2H ||
+            mCurrentCommand == PK_COMMAND_SET_LEVEL_SECURITY_LOW ||
+            mCurrentCommand == PK_COMMAND_GET_LEVEL_SECURITY) {
           processCapturedData(data);
         } else if (mCurrentCommand == PK_COMMAND_TEMPLATE) {
           processCapturedData(data);
@@ -429,6 +478,33 @@ class SecugenBlePlugin {
           completeSetPowerOff2H(
               OperationResult.error("Error Set Power Off 2h"));
       }
+    } else if (header.pktCommand == PK_COMMAND_SET_LEVEL_SECURITY_LOW) {
+      switch (header.pktError) {
+        case errNone:
+          var status = (await parseResponse(buffer)).toString();
+          addLog(status);
+          completeSetVerifySecurityLowLevel(OperationResult.success(status));
+
+          break;
+        default:
+          addLog("Error Set Security Level");
+          completeSetVerifySecurityLowLevel(
+              OperationResult.error("Error Set Security Level"));
+      }
+    } else if (header.pktCommand == PK_COMMAND_GET_LEVEL_SECURITY) {
+      switch (header.pktError) {
+        case errNone:
+          var status = (await parseResponse(buffer)).toString();
+          addLog(status);
+          completeGetSystemInfoSecurityLevel(OperationResult.success(
+              status + "Param 2" + header.pktParam2.toString()));
+
+          break;
+        default:
+          addLog("Error Get Security Level");
+          completeGetSystemInfoSecurityLevel(
+              OperationResult.error("Error Get Security Level"));
+      }
     }
   }
 
@@ -462,6 +538,32 @@ class SecugenBlePlugin {
     await ble.writeCharacteristicWithResponse(characteristicWrite,
         value: await setPowerOffTime2H());
     return _completerSetPowerOffTime2H!.future;
+  }
+
+  Future<OperationResult> getVerifySecurityLowLevel(
+      FlutterReactiveBle ble, String deviceId) async {
+    final characteristicWrite = QualifiedCharacteristic(
+        serviceId: SERVICE_SECUGEN_SPP_OVER_BLE,
+        characteristicId: CHARACTERISTIC_WRITE,
+        deviceId: deviceId);
+    startNewSetVerifySecurityLowLevelOperation();
+
+    await ble.writeCharacteristicWithResponse(characteristicWrite,
+        value: await setVerifySecurityLowLevel());
+    return _completerSetVerifySecurityLowLevel!.future;
+  }
+
+  Future<OperationResult> getSystemVerifySecurityLowLevel(
+      FlutterReactiveBle ble, String deviceId) async {
+    final characteristicWrite = QualifiedCharacteristic(
+        serviceId: SERVICE_SECUGEN_SPP_OVER_BLE,
+        characteristicId: CHARACTERISTIC_WRITE,
+        deviceId: deviceId);
+    startNewGetSystemInfoSecurityLevelOperation();
+
+    await ble.writeCharacteristicWithResponse(characteristicWrite,
+        value: await getSystemInfoSecurityLevel());
+    return _completerGetSystemInfoSecurityLevel!.future;
   }
 
   Future<OperationResult> getDeviceVersion(

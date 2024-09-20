@@ -23,6 +23,9 @@ public class SecugenBlePlugin implements FlutterPlugin, MethodCallHandler {
 
 
   private final String METHOD_SET_POWER_OFF_TIME_2H = "cmdSetPowerOffTime2H";
+  private final String METHOD_SET_VERIFY_LEVEL = "cmdSetVerifyLevel";
+  private final String METHOD_GET_VERIFY_LEVEL = "cmdGetVerifyLevel";
+
   private final String METHOD_GET_VERSION = "cmdGetVersion";
   private final String METHOD_PARSE_RESPONSE = "parseResponse";
   private final String METHOD_GET_TEMPLATE = "cmdGetTemplate";
@@ -41,7 +44,7 @@ public class SecugenBlePlugin implements FlutterPlugin, MethodCallHandler {
  // private final String METHOD_FP_CAPTURE_USE_WSQ = "cmdFPCaptureUseWSQ";
  // private final String METHOD_INSTANT_VERIFY = "cmdInstantVerify";
  // private final String METHOD_SERIAL_NUMBER = "cmdGetSerialNumber";
- // private final String METHOD_SET_SYSTEM_INFO = "cmdSetSystemInfo";
+  private final String METHOD_SET_SYSTEM_INFO = "cmdSetSystemInfo";
  // private final String METHOD_SET_SYSTEM_INFO_WITH_PARAM2 = "cmdSetSystemInfoWithParam2";
  // private final String METHOD_GET_HEADER = "getHeader";
 
@@ -71,6 +74,12 @@ public class SecugenBlePlugin implements FlutterPlugin, MethodCallHandler {
         break;
       case METHOD_SET_POWER_OFF_TIME_2H:
           setPowerOffTime2H(result,  call.arguments);
+        break;
+      case METHOD_SET_VERIFY_LEVEL:
+          setVerifySecurityLowLevel(result,  call.arguments);
+        break;
+       case METHOD_GET_VERIFY_LEVEL:
+          getVerifySecurityLevel(result,  call.arguments);
         break;
       case METHOD_INSTANT_VERIFY_WITH_EXTRADATA:
          instantVerifyExtraData(result,  call.arguments);
@@ -102,6 +111,26 @@ public class SecugenBlePlugin implements FlutterPlugin, MethodCallHandler {
     byte[] versionBytes  = FMSAPI.cmdSetPowerOffTime2H();
     var i = FMSAPI.parseResponse(versionBytes);
     Log.e(TAG, "SET POWER OFF TIME RESULT----- " + i);
+    result.success(versionBytes);
+  }
+
+   private void setVerifySecurityLowLevel(MethodChannel.Result result,  Object arguments) {
+    short parameter1 = (short)0x08;
+    short parameter2 = (short)0x02;
+
+    byte[] versionBytes  = FMSAPI.cmdSetSystemInfo(parameter1,parameter2);
+    var i = FMSAPI.parseResponse(versionBytes);
+    Log.e(TAG, "SET VerifySecurityLowLevel  RESULT----- " + i);
+    result.success(versionBytes);
+  }
+
+     private void getVerifySecurityLevel(MethodChannel.Result result,  Object arguments) {
+    short parameter1 = (short)0x08;
+    //short parameter2 = (short)0x03;
+
+    byte[] versionBytes  = FMSAPI.cmdGetSystemInfo(parameter1);
+    var i = FMSAPI.parseResponse(versionBytes);
+    Log.e(TAG, "GET VerifySecurityLevel  RESULT----- " + i);
     result.success(versionBytes);
   }
 

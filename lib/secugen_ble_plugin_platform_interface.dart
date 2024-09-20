@@ -37,6 +37,16 @@ abstract class SecugenBlePluginPlatform extends PlatformInterface {
     throw UnimplementedError('setPowerOffTime2H() has not been implemented.');
   }
 
+  Future<List<int>> setVerifySecurityLowLevel() {
+    throw UnimplementedError(
+        'setVerifySecurityLowLevel() has not been implemented.');
+  }
+
+  Future<List<int>> getVerifySecurityLevel() {
+    throw UnimplementedError(
+        'getVerifySecurityLevel() has not been implemented.');
+  }
+
   Future<List<int>> getTemplate() {
     throw UnimplementedError('getTemplate() has not been implemented.');
   }

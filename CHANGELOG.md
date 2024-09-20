@@ -81,3 +81,7 @@
 ## 0.0.20
 
 *FIx Set Power Off Time 2h
+
+## 0.0.21
+
+*Add Set Get Security evel Low

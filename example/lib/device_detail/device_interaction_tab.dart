@@ -349,6 +349,32 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
                         },
                         child: const Text("Set Power off Time 2h"),
                       ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (widget.viewModel.deviceConnected) {
+                            var result = await _secugenBlePlugin
+                                .getVerifySecurityLowLevel(
+                                    _ble, widget.viewModel.deviceId);
+                            setState(() {
+                              _status = result.message;
+                            });
+                          }
+                        },
+                        child: const Text("Set Security Low Level"),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (widget.viewModel.deviceConnected) {
+                            var result = await _secugenBlePlugin
+                                .getSystemVerifySecurityLowLevel(
+                                    _ble, widget.viewModel.deviceId);
+                            setState(() {
+                              _status = result.message;
+                            });
+                          }
+                        },
+                        child: const Text("Get Security Low Level"),
+                      ),
                     ],
                   ),
                 ),
