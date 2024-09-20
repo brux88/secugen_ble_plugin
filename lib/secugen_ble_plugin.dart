@@ -497,7 +497,7 @@ class SecugenBlePlugin {
           var status = (await parseResponse(buffer)).toString();
           addLog(status);
           completeGetSystemInfoSecurityLevel(OperationResult.success(
-              status + "Param 2" + header.pktParam2.toString()));
+              "${status} - Result: ${header.pktParam2}"));
 
           break;
         default:
