@@ -85,3 +85,7 @@
 ## 0.0.21
 
 *Add Set Get Security evel Low
+
+## 0.0.22
+
+*Add Set Get Security Instant Verify evel Low

@@ -115,8 +115,8 @@ public class SecugenBlePlugin implements FlutterPlugin, MethodCallHandler {
   }
 
    private void setVerifySecurityLowLevel(MethodChannel.Result result,  Object arguments) {
-    short parameter1 = (short)0x08;
-    short parameter2 = (short)0x02;
+    short parameter1 = (short)0x02;
+    short parameter2 = (short)0x01;
 
     byte[] versionBytes  = FMSAPI.cmdSetSystemInfo(parameter1,parameter2);
     var i = FMSAPI.parseResponse(versionBytes);
@@ -125,7 +125,7 @@ public class SecugenBlePlugin implements FlutterPlugin, MethodCallHandler {
   }
 
      private void getVerifySecurityLevel(MethodChannel.Result result,  Object arguments) {
-    short parameter1 = (short)0x08;
+    short parameter1 = (short)0x02;
     //short parameter2 = (short)0x03;
 
     byte[] versionBytes  = FMSAPI.cmdGetSystemInfo(parameter1);
