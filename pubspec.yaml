@@ -1,6 +1,6 @@
 name: secugen_ble_plugin
 description: Flutter plugin for connecting to and using the Secuge Unity20 BLE fingerprint scanner. Enables fingerprint data capture and device management via Bluetooth.
-version: 0.0.23
+version: 0.0.24
 repository: https://github.com/brux88/secugen_ble_plugin
 
 environment:

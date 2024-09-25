@@ -93,3 +93,7 @@
 ## 0.0.23
 
 *Add nfc ios
+
+## 0.0.24
+
+*Add nfc ios2

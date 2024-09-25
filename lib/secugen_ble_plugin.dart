@@ -316,7 +316,6 @@ class SecugenBlePlugin {
 
   void completeReadNfc(OperationResult result) {
     if (!_isReadNfcCompleted) {
-
       _completerReadNfc?.complete(result);
       _isReadNfcCompleted = true;
     }
@@ -628,7 +627,9 @@ class SecugenBlePlugin {
         _sendStatusUpdateNfc(NfcOperationStatus.waitingForCard);
         // Avvia la scansione NFC
         NFCTag tag = await FlutterNfcKit.poll();
-
+        if (Platform.isIOS) {
+          await FlutterNfcKit.setIosAlertMessage("Sto scrivendo...");
+        }
         if (tag.ndefWritable != null) {
           _sendStatusUpdateNfc(NfcOperationStatus.writing);
 
@@ -659,6 +660,9 @@ class SecugenBlePlugin {
         }
         return _completerWriteNfc!.future;
       } catch (e) {
+        if (Platform.isIOS) {
+          await FlutterNfcKit.finish();
+        }
         _sendStatusUpdateNfc(NfcOperationStatus.error);
 
         addLog("Errore durante la scrittura del template sulla scheda NFC: $e");
@@ -693,7 +697,7 @@ class SecugenBlePlugin {
       _sendStatusUpdateNfc(NfcOperationStatus.waitingForCard);
       NFCTag tag = await FlutterNfcKit.poll();
       if (Platform.isIOS) {
-        await FlutterNfcKit.setIosAlertMessage("Sono in attesa di una Card Nfc...");
+        await FlutterNfcKit.setIosAlertMessage("Sto leggendo...");
       }
       // Assicurati che il tag sia NDEF
       if (tag.ndefAvailable!) {
