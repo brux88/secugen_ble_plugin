@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_nfc_kit/flutter_nfc_kit.dart';
@@ -315,6 +316,7 @@ class SecugenBlePlugin {
 
   void completeReadNfc(OperationResult result) {
     if (!_isReadNfcCompleted) {
+
       _completerReadNfc?.complete(result);
       _isReadNfcCompleted = true;
     }
@@ -665,7 +667,9 @@ class SecugenBlePlugin {
         return _completerWriteNfc!.future;
       } finally {
         // Termina la sessione NFC
-        //  await FlutterNfcKit.finish();
+        if (Platform.isIOS) {
+          await FlutterNfcKit.finish();
+        }
       }
     } else {
       addLog("Template not found");
@@ -688,7 +692,9 @@ class SecugenBlePlugin {
       // Poll per trovare il tag NFC
       _sendStatusUpdateNfc(NfcOperationStatus.waitingForCard);
       NFCTag tag = await FlutterNfcKit.poll();
-
+      if (Platform.isIOS) {
+        await FlutterNfcKit.setIosAlertMessage("Sono in attesa di una Card Nfc...");
+      }
       // Assicurati che il tag sia NDEF
       if (tag.ndefAvailable!) {
         _sendStatusUpdateNfc(NfcOperationStatus.reading);
@@ -729,10 +735,16 @@ class SecugenBlePlugin {
       }
 
       // Disconnessione NFC
+      if (Platform.isIOS) {
+        await FlutterNfcKit.finish();
+      }
       //await FlutterNfcKit.finish(iosAlertMessage: "Finished!");
     } catch (e) {
       _sendStatusUpdateNfc(NfcOperationStatus.error);
       addLog('Error reading NFC tag: $e');
+      if (Platform.isIOS) {
+        await FlutterNfcKit.finish();
+      }
       completeReadNfc(OperationResult.error("Error reading NFC tag: $e"));
     }
     return _completerReadNfc!.future;

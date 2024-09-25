@@ -314,12 +314,12 @@ class _DeviceInteractionTabState extends State<_DeviceInteractionTab> {
                       ),
                       ElevatedButton(
                         onPressed: () async {
-                          if (widget.viewModel.deviceConnected) {
+                         // if (widget.viewModel.deviceConnected) {
                             var result = await _secugenBlePlugin.readNfc();
                             setState(() {
                               _status = result.message;
                             });
-                          }
+                         // }
                         },
                         child: const Text("Read Template Nfc"),
                       ),

@@ -89,3 +89,7 @@
 ## 0.0.22
 
 *Add Set Get Security Instant Verify evel Low
+
+## 0.0.23
+
+*Add nfc ios
