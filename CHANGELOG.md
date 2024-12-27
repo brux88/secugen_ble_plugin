@@ -97,3 +97,23 @@
 ## 0.0.24
 
 *Add nfc ios2
+
+## 0.0.25
+
+*Add name and surname write nfc
+
+
+## 0.0.26
+
+*Add name and surname read nfc
+
+
+
+## 0.0.27
+
+*Fix read nfc
+
+
+## 0.0.28
+
+*Fix write nfc

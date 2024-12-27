@@ -614,11 +614,13 @@ class SecugenBlePlugin {
 
   //NFC
 // Metodo per creare e serializzare il Template in JSON
-  TemplateNFC createTemplate(String id, Uint8List template) {
-    return TemplateNFC.fromUint8List(id, template);
+  TemplateNFC createTemplate(
+      String id, Uint8List template, String? nome, String? cognome) {
+    return TemplateNFC.fromUint8List(id, template, nome, cognome);
   }
 
-  Future<OperationResult> writeIntoNfc(String id) async {
+  Future<OperationResult> writeIntoNfc(String id,
+      [String? nome, String? cognome]) async {
     startNewWriteNfcOperation();
 
     if (mOneTemplateBuf.isNotEmpty) {
@@ -633,7 +635,8 @@ class SecugenBlePlugin {
         if (tag.ndefWritable != null) {
           _sendStatusUpdateNfc(NfcOperationStatus.writing);
 
-          TemplateNFC templateNfc = createTemplate(id, mOneTemplateBuf);
+          TemplateNFC templateNfc =
+              createTemplate(id, mOneTemplateBuf, nome, cognome);
 
           String jsonString = jsonEncode(templateNfc.toJson());
           Uint8List jsonData = Uint8List.fromList(utf8.encode(jsonString));
@@ -715,11 +718,16 @@ class SecugenBlePlugin {
           // Decodifica la stringa Base64 in Uint8List
           Uint8List template = base64Decode(base64String);
           String id = jsonData['id'];
+          String? nome = jsonData['nome'] ?? "";
+          String? cognome = jsonData['cognome'] ?? "";
           mOneTemplateBuf = template;
 
           // Crea un'istanza di TemplateNFC
-          TemplateNFC templateNfc =
-              TemplateNFC(id: id, templateBase64: base64String);
+          TemplateNFC templateNfc = TemplateNFC(
+              id: id,
+              templateBase64: base64String,
+              nome: nome,
+              cognome: cognome);
           addLog('NFC Data Success Id: $id  - template: $template');
           _sendStatusUpdateNfc(NfcOperationStatus.readSuccess);
           completeReadNfc(OperationResult.success(
