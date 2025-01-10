@@ -616,7 +616,11 @@ class SecugenBlePlugin {
 // Metodo per creare e serializzare il Template in JSON
   TemplateNFC createTemplate(
       String id, Uint8List template, String? nome, String? cognome) {
-    return TemplateNFC.fromUint8List(id, template, nome, cognome);
+    if (template.every((byte) => byte == 0)) {
+      return TemplateNFC.fromUint8List(id, null, nome, cognome);
+    } else {
+      return TemplateNFC.fromUint8List(id, template, nome, cognome);
+    }
   }
 
   Future<OperationResult> writeIntoNfc(String id,

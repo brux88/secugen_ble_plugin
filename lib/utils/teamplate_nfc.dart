@@ -15,10 +15,11 @@ class TemplateNFC {
 
   // Factory method per creare un Template dal Uint8List
   factory TemplateNFC.fromUint8List(
-      String id, Uint8List template, String? nome, String? cognome) {
+      String id, Uint8List? template, String? nome, String? cognome) {
     String guid = id; // Genera un GUID
-    String templateBase64 =
-        base64Encode(template); // Codifica il template in base64
+    String templateBase64 = template != null
+        ? base64Encode(template)
+        : ""; // Codifica il template in base64
     return TemplateNFC(
         id: guid, templateBase64: templateBase64, nome: nome, cognome: cognome);
   }

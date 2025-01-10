@@ -117,3 +117,7 @@
 ## 0.0.28
 
 *Fix write nfc
+
+## 0.0.29
+
+*Fix write nfc empty template
